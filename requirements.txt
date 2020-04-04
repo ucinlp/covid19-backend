@@ -1,0 +1,6 @@
+# REST interface
+flask>=1.0.2
+gevent>=1.4.0
+
+# Model-related
+transformers[torch]>=2.7.0
