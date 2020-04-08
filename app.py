@@ -33,11 +33,19 @@ def make_app():
 
     @app.route('/predict/', methods=['POST'])
     def predict():
-        data = json.loads(flask.request.get_data())
+        raw = flask.request.get_data()
+        data = json.loads(raw) if raw else {}
         logger.info('request: %s', json.dumps(data))
 
-        prediction = {}  # Best model prediction ever!
-
+        prediction = {
+            'input': data,
+            'relevant': True,
+            'predictions': [{
+            'misinformation_score': 1.0,
+            'misinformation_sentence': "Don't lick faces.",
+            'misinformation_link': "http://google.com",
+            }]
+        }  # Best model prediction ever!
         return flask.jsonify(prediction)
 
     return app
