@@ -7,6 +7,7 @@ import logging
 import sys
 
 import flask
+import flask_cors
 from gevent.pywsgi import WSGIServer
 
 
@@ -28,10 +29,11 @@ def main(port: int):
 
 def make_app():
     app = flask.Flask(__name__)
+    flask_cors.CORS(app)
 
     @app.route('/predict/', methods=['POST'])
     def predict():
-        data = flask.request.get_json()
+        data = json.loads(flask.request.get_data())
         logger.info('request: %s', json.dumps(data))
 
         prediction = {}  # Best model prediction ever!
