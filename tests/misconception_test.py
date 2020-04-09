@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from backend.misconception import Misconception, MisconceptionDataset
+from backend.ml.misconception import Misconception, MisconceptionDataset
 
 
 class MisconceptionDatasetTest(TestCase):

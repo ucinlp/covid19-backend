@@ -3,8 +3,8 @@ from unittest import TestCase
 import numpy as np
 from overrides import overrides
 
-from backend.detector import Detector
-from backend.misconception import Misconception, MisconceptionDataset
+from backend.ml.detector import Detector
+from backend.ml.misconception import Misconception, MisconceptionDataset
 
 
 class MockDetector(Detector):

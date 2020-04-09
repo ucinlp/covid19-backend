@@ -2,10 +2,10 @@ from unittest import TestCase
 
 import torch
 
-from backend.bertscore import (
+from backend.ml.bertscore import (
     bertscore, soft_precision, soft_recall, BertScoreDetector, MaskedEmbeddings
 )
-from backend.misconception import Misconception, MisconceptionDataset
+from backend.ml.misconception import Misconception, MisconceptionDataset
 
 
 SMALL_MODEL_IDENTIFIER = "julien-c/bert-xsmall-dummy"

@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Union
 
 import numpy as np
 
-from backend.misconception import MisconceptionDataset
+from backend.ml.misconception import MisconceptionDataset
 
 
 class Detector:

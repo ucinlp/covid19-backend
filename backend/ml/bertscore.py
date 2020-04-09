@@ -9,7 +9,7 @@ from overrides import overrides
 import torch
 from transformers import AutoModel, AutoTokenizer
 
-from backend.detector import Detector
+from backend.ml.detector import Detector
 
 
 @dataclass
