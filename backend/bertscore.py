@@ -2,8 +2,14 @@
 BERTScore-based model
 """
 from dataclasses import dataclass
+from typing import List
 
+import numpy as np
+from overrides import overrides
 import torch
+from transformers import AutoModel, AutoTokenizer
+
+from backend.detector import Detector
 
 
 @dataclass
@@ -78,3 +84,31 @@ def bertscore(candidate: MaskedEmbeddings,
     f1 = 2 * precision * recall / (precision + recall)
 
     return f1
+
+
+class BertScoreDetector(Detector):
+    def __init__(self, model_name: str) -> None:
+        super().__init__()
+        self._model_name = model_name
+        self._tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self._model = AutoModel.from_pretrained(model_name)
+
+    @overrides
+    def _encode(self, sentences: List[str]) -> MaskedEmbeddings:
+        model_input = self._tokenizer.batch_encode_plus(
+            sentences,
+            pad_to_max_length=True,
+            return_attention_mask=True,
+            return_tensors='pt'
+        )
+        mask = model_input['attention_mask']
+        embeddings, *_ = self._model(**model_input)
+        return MaskedEmbeddings(embeddings, mask)
+
+    @overrides
+    def _score(self,
+               encoded_sentences: MaskedEmbeddings,
+               encoded_misconceptions: MaskedEmbeddings) -> np.ndarray:
+        with torch.no_grad():
+            score = bertscore(encoded_sentences, encoded_misconceptions)
+        return score.cpu().numpy()

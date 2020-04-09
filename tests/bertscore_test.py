@@ -2,12 +2,19 @@ from unittest import TestCase
 
 import torch
 
-from backend.bertscore import bertscore, soft_precision, soft_recall, MaskedEmbeddings
+from backend.bertscore import (
+    bertscore, soft_precision, soft_recall, BertScoreDetector, MaskedEmbeddings
+)
+from backend.misconception import Misconception, MisconceptionDataset
+
+
+SMALL_MODEL_IDENTIFIER = "julien-c/bert-xsmall-dummy"
 
 
 class BertScoreTest(TestCase):
     def test_output_is_correct(self):
-        # tests score computation is correct for reference and candidates comprised of two identical sequences:
+        # tests score computation is correct for reference and candidates comprised of two
+        # identical sequences:
         #   sequence 1: contains two tokens
         #   sequence 2: contains three tokens
         embeddings = torch.FloatTensor([
@@ -44,3 +51,15 @@ class BertScoreTest(TestCase):
         reference = MaskedEmbeddings(torch.randn(1, 1, 3), torch.ones(1, 1))
         with self.assertRaises(ValueError):
             bertscore(candidate, reference)
+
+
+class BertScoreDetectorTest(TestCase):
+    def test_score(self):
+        # checks that we can load a small transformer and use it to score test sentences without
+        # raising any errors.
+        misconceptions = MisconceptionDataset((
+            Misconception('glue is good for digestion', 'https://bogushealth.org'),
+        ))
+        sentences = ['Lorem ipsum', 'dolor sit amet']
+        detector = BertScoreDetector(SMALL_MODEL_IDENTIFIER)
+        detector.score(sentences, misconceptions)
