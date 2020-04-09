@@ -41,9 +41,9 @@ def make_app():
             'input': data,
             'relevant': True,
             'predictions': [{
-            'misinformation_score': 1.0,
-            'misinformation_sentence': "Don't lick faces.",
-            'misinformation_link': "http://google.com",
+                'misinformation_score': 1.0,
+                'misinformation_sentence': "Don't lick faces.",
+                'misinformation_link': "http://google.com",
             }]
         }  # Best model prediction ever!
         return flask.jsonify(prediction)
