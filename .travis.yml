@@ -1,5 +1,7 @@
 language: python
-cache: pip
+cache:
+  pip: true
+  directories: $HOME/.cache/
 python:
   - "3.7"
 install:
