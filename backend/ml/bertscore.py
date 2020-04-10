@@ -68,15 +68,15 @@ def bertscore(candidate: MaskedEmbeddings,
     if candidate.embeddings.size(-1) != reference.embeddings.size(-1):
         raise ValueError("Embedding dimensions must match")
 
-    # normalize embeddings
+    # Normalize embeddings.
     candidate_embeddings = torch.nn.functional.normalize(candidate.embeddings, dim=-1)
     reference_embeddings = torch.nn.functional.normalize(reference.embeddings, dim=-1)
 
-    # compute dot products between all contextualized word embeddings.
+    # Compute dot products between all contextualized word embeddings.
     # shape: (num_refs, num_cands, max_ref_len, max_cand_len)
     dot_products = torch.einsum('ire,jce->ijrc', reference_embeddings, candidate_embeddings)
 
-    # compute soft precision and recall scores by taking max along reference and candidate sequence
+    # Compute soft precision and recall scores by taking max along reference and candidate sequence
     # length dimensions, respectively, and summing.
     # shape: (num_refs, num_cands)
     precision = soft_precision(dot_products, candidate.mask)

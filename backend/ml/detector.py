@@ -42,7 +42,6 @@ class Detector:
             self._cache[misconceptions] = self._encode(misconceptions.sentences)
         encoded_misconceptions = self._cache[misconceptions]
 
-        # ensure sentences is a list and encode.
         if isinstance(sentences, str):
             sentences = [sentences]
         encoded_sentences = self._encode(sentences)
