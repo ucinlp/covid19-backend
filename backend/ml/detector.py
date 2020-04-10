@@ -39,7 +39,7 @@ class Detector:
         """
         # encode misconceptions and cache to avoid needless recomputation.
         if misconceptions not in self._cache:
-            self._cache[misconceptions] = self._encode(misconceptions.sentences)
+            self.cache_[misconceptions] = misconceptions
         encoded_misconceptions = self._cache[misconceptions]
 
         if isinstance(sentences, str):
@@ -48,3 +48,9 @@ class Detector:
 
         scores = self._score(encoded_sentences, encoded_misconceptions)
         return scores
+
+    def refresh_cache(self) -> None:
+        """
+        Refresh (clear) the misconception cache.
+        """
+        self._cache = {}
