@@ -64,6 +64,10 @@ def bertscore(candidate: MaskedEmbeddings,
     reference : MaskedEmbeddings
         Masked embeddings of the reference sentences. The expected shape of the embedding tensor
         is: (num_refs, max_ref_len, embedding_dim)
+
+    # Returns
+    f1 : torch.FloatTensor
+        Tensor of pairwise f1 scores, with shape: (num_cands, num_refs)
     """
     if candidate.embeddings.size(-1) != reference.embeddings.size(-1):
         raise ValueError("Embedding dimensions must match")
@@ -76,6 +80,10 @@ def bertscore(candidate: MaskedEmbeddings,
     # shape: (num_refs, num_cands, max_ref_len, max_cand_len)
     dot_products = torch.einsum('ire,jce->ijrc', reference_embeddings, candidate_embeddings)
 
+    # We assign scores of pad tokens to a large negative value to prevent them from being matched.
+    mask = torch.einsum('ir,jc->ijrc', reference.mask, candidate.mask)
+    dot_products = dot_products - 1e13 * (1 - mask)
+
     # Compute soft precision and recall scores by taking max along reference and candidate sequence
     # length dimensions, respectively, and summing.
     # shape: (num_refs, num_cands)
@@ -83,7 +91,10 @@ def bertscore(candidate: MaskedEmbeddings,
     recall = soft_recall(dot_products, reference.mask)
     f1 = 2 * precision * recall / (precision + recall)
 
-    return f1
+    # Transpose the f1 tensor since intuitively the `num_cands` dimension (e.g., batch size) should
+    # be first We opted not to do this earlier to make the above computations match the equations
+    # in the BERTScore paper.
+    return f1.transpose(0, 1)
 
 
 class BertScoreDetector(Detector):

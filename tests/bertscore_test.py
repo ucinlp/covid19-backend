@@ -1,5 +1,6 @@
 from unittest import TestCase
 
+import numpy as np
 import torch
 
 from backend.ml.bertscore import (
@@ -54,12 +55,14 @@ class BertScoreTest(TestCase):
 
 
 class BertScoreDetectorTest(TestCase):
-    def test_score(self):
-        # checks that we can load a small transformer and use it to score test sentences without
-        # raising any errors.
+    def test_scores_not_affected_by_padding(self):
+        # Checks that score works on individual sentences as well as lists of sentences, and that
+        # padding does not affect scores.
         misconceptions = MisconceptionDataset((
             Misconception('glue is good for digestion', 'https://bogushealth.org'),
         ))
         sentences = ['Lorem ipsum', 'dolor sit amet']
         detector = BertScoreDetector(SMALL_MODEL_IDENTIFIER)
-        detector.score(sentences, misconceptions)
+        score_a = detector.score(sentences[0], misconceptions)
+        score_b = detector.score(sentences, misconceptions)[0]
+        assert np.allclose(score_a, score_b)
