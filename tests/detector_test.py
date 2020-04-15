@@ -21,9 +21,8 @@ class MockDetector(Detector):
 
 class DetectorTest(TestCase):
     def test_score_caches_misconceptions(self):
-        misconceptions = MisconceptionDataset((
-            Misconception('glue is good for digestion', 'https://bogushealth.org'),
-        ))
+        with open('tests/fixtures/misconceptions.jsonl', 'r') as f:
+            misconceptions = MisconceptionDataset.from_jsonl(f)
         sentences = ['Lorem ipsum', 'dolor sit amet']
         detector = MockDetector()
         detector.score(sentences, misconceptions)

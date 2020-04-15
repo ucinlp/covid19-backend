@@ -6,7 +6,7 @@ import torch
 from backend.ml.bertscore import (
     bertscore, soft_precision, soft_recall, BertScoreDetector, MaskedEmbeddings
 )
-from backend.ml.misconception import Misconception, MisconceptionDataset
+from backend.ml.misconception import MisconceptionDataset
 
 
 SMALL_MODEL_IDENTIFIER = "julien-c/bert-xsmall-dummy"
@@ -58,9 +58,8 @@ class BertScoreDetectorTest(TestCase):
     def test_scores_not_affected_by_padding(self):
         # Checks that score works on individual sentences as well as lists of sentences, and that
         # padding does not affect scores.
-        misconceptions = MisconceptionDataset((
-            Misconception('glue is good for digestion', 'https://bogushealth.org'),
-        ))
+        with open('tests/fixtures/misconceptions.jsonl', 'r') as f:
+            misconceptions = MisconceptionDataset.from_jsonl(f)
         sentences = ['Lorem ipsum', 'dolor sit amet']
         detector = BertScoreDetector(SMALL_MODEL_IDENTIFIER)
         score_a = detector.score(sentences[0], misconceptions)
