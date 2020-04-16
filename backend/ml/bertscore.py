@@ -123,3 +123,10 @@ class BertScoreDetector(Detector):
         with torch.no_grad():
             score = bertscore(encoded_sentences, encoded_misconceptions)
         return score.cpu().numpy()
+
+    @overrides
+    def _predict(self, scores: np.ndarray) -> List[List[int]]:
+        # TODO: @rloganiv - Something smarter thank just returning top-5.
+        k = 5
+        topk = scores.argsort(axis=-1)[:, :-(k+1):-1]
+        return topk.tolist()

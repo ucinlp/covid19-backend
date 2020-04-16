@@ -18,13 +18,33 @@ class MockDetector(Detector):
         num_misconceptions = len(encoded_misconceptions)
         return np.zeros((num_sentences, num_misconceptions))
 
+    @overrides
+    def _predict(self, scores):
+        return [[0]]
+
 
 class DetectorTest(TestCase):
-    def test_score_caches_misconceptions(self):
+    def setUp(self):
+        self.detector = MockDetector()
         with open('tests/fixtures/misconceptions.jsonl', 'r') as f:
             misconceptions = MisconceptionDataset.from_jsonl(f)
+        self.misconceptions = misconceptions
+
+    def test_score_caches_misconceptions(self):
         sentences = ['Lorem ipsum', 'dolor sit amet']
-        detector = MockDetector()
-        detector.score(sentences, misconceptions)
-        self.assertIn(misconceptions, detector._cache)
-        self.assertListEqual(detector._cache[misconceptions], misconceptions.sentences)
+        self.detector.score(sentences, self.misconceptions)
+        self.assertIn(self.misconceptions, self.detector._cache)
+        self.assertListEqual(self.misconceptions.sentences,
+                             self.detector._cache[self.misconceptions])
+
+    def test_predict(self):
+        sentence = 'Lorem ipsum'
+        output_dict = self.detector.predict(sentence, self.misconceptions)
+        self.assertEqual(output_dict['input'], sentence)
+        self.assertTrue(output_dict['relevant'])
+        expected_predictions = [{
+            'misinformation_score': 0.0,
+            'misinformation_links': ('https://www.google.com',),
+            'misinformation_sentence': "don't lick faces",
+        }]
+        self.assertListEqual(output_dict['predictions'], expected_predictions)

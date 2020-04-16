@@ -18,6 +18,50 @@ class Detector:
     def _encode(self, sentences: List[str]):
         raise NotImplementedError
 
+    def _predict(self, scores: np.ndarray) -> List[List[int]]:
+        raise NotImplementedError
+
+    def predict(self,
+                sentence: str,
+                misconceptions: MisconceptionDataset) -> Dict[str, Any]:
+        """
+        Predicts whether a given piece of text corresponds to a misconception.
+
+        # Parameters
+        sentences : str or List[str]
+            The text to score. Can either be a string or a list of strings.
+        misconceptions : MisconceptionDataset
+            The misconceptions to score against.
+
+        # Returns
+        output : Dict[str, Any]
+            A dictionary of the prediction results. Will be serialized to JSON.
+        """
+        # TODO: @rloganiv - Current implementation works on a single sentence since that is the
+        # expected input from the frontend. For evaluation purposes it probably makes sense to
+        # allow predictions on batches on instances as well...maybe as a seperate method so output
+        # type is consistent.
+        scores = self.score(sentence, misconceptions)
+        predictions = self._predict(scores)[0]
+
+        # TODO: Relevance prediction
+        readable_predictions = []
+        for idx in predictions:
+            score = scores[0, idx]
+            misconception = misconceptions[idx]
+            readable_predictions.append({
+                'misinformation_score': score,
+                'misinformation_sentence': misconception.canonical_sentence,
+                'misinformation_links':  misconception.sources,
+            })
+
+        output_dict = {
+            'input': sentence,
+            'relevant': True,
+            'predictions': readable_predictions,
+        }
+        return output_dict
+
     def _score(self, sentences, misconceptions) -> np.ndarray:
         raise NotImplementedError
 
