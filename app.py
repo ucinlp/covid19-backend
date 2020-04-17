@@ -10,6 +10,9 @@ import flask
 import flask_cors
 from gevent.pywsgi import WSGIServer
 
+from backend.ml.bertscore import BertScoreDetector
+from backend.ml.misconception import MisconceptionDataset
+
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -31,21 +34,18 @@ def make_app():
     app = flask.Flask(__name__)
     flask_cors.CORS(app)
 
+    # TODO: Periodically reload.
+    with open('misconceptions.jsonl', 'r') as f:
+        app.misconceptions = MisconceptionDataset.from_jsonl(f)
+    app.detector = BertScoreDetector('bert-base-uncased')
+
     @app.route('/predict/', methods=['POST'])
     def predict():
         raw = flask.request.get_data()
         data = json.loads(raw) if raw else {}
         logger.info('request: %s', json.dumps(data))
+        prediction = app.detector.predict(data['input'], app.misconceptions)
 
-        prediction = {
-            'input': data,
-            'relevant': True,
-            'predictions': [{
-                'misinformation_score': 1.0,
-                'misinformation_sentence': "Don't lick faces.",
-                'misinformation_link': "http://google.com",
-            }]
-        }  # Best model prediction ever!
         return flask.jsonify(prediction)
 
     return app

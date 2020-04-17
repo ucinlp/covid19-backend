@@ -50,7 +50,7 @@ class Detector:
             score = scores[0, idx]
             misconception = misconceptions[idx]
             readable_predictions.append({
-                'misinformation_score': score,
+                'misinformation_score': float(score),
                 'misinformation_sentence': misconception.canonical_sentence,
                 'misinformation_links':  misconception.sources,
             })
