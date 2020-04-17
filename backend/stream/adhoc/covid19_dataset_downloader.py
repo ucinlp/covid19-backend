@@ -1,0 +1,118 @@
+import argparse
+import json
+import os
+import time
+import sys
+
+from requests.exceptions import Timeout
+from requests_oauthlib import OAuth1Session
+
+CONSUMER_KEY = os.environ.get('TWITTER_CONSUMER_KEY', None)
+CONSUMER_SECRET = os.environ.get('TWITTER_CONSUMER_SECRET', None)
+ACCESS_TOKEN = os.environ.get('TWITTER_ACCESS_TOKEN', None)
+ACCESS_TOKEN_SECRET = os.environ.get('TWITTER_ACCESS_TOKEN_SECRET', None)
+
+
+def get_argparser():
+    parser = argparse.ArgumentParser(description='COVID-19 Tweet dataset downloader')
+    parser.add_argument('--input', required=True, help='input root dir path')
+    parser.add_argument('--output', required=True, help='output root dir path')
+    return parser
+
+
+def get_dir_paths(dir_path):
+    file_path_list = list()
+    for file_name in os.listdir(dir_path):
+        if os.path.isdir(file_name) and not file_name.startswith('.'):
+            file_path_list.append(os.path.join(dir_path, file_name))
+    return file_path_list
+
+
+def get_file_paths(dir_path, ext=None):
+    file_path_list = list()
+    for file_name in os.listdir(dir_path):
+        file_path = os.path.join(dir_path, file_name)
+        if os.path.isfile(file_path) and (ext is None or file_name.endswith(ext)):
+            file_path_list.append(file_path)
+    return file_path_list
+
+
+def get_done_set(output_dir_path):
+    file_paths = get_file_paths(output_dir_path, ext='.jsonl')
+    done_set = set()
+    for file_path in file_paths:
+        if os.stat(file_path).st_size > 0:
+            done_set.add(file_path)
+    return done_set
+
+
+def send_query(client, ids_str):
+    url = 'https://api.twitter.com/1.1/statuses/lookup.json'
+    params = {'tweet_mode': 'extended', 'id': ids_str}
+    try:
+        req = client.get(url, params=params)
+        if req.status_code == 200:
+            return json.loads(req.text)
+        return req.status_code
+    except Timeout:
+        print('Timeout error')
+        return 504
+    except:
+        print("Unexpected error:", sys.exc_info()[0])
+    return None
+
+
+def download_tweet_data(input_dir_path, output_dir_path):
+    if not os.path.isdir(output_dir_path):
+        os.makedirs(output_dir_path)
+        print('Created {}'.format(output_dir_path))
+
+    done_set = get_done_set(output_dir_path)
+    client = OAuth1Session(CONSUMER_KEY, CONSUMER_SECRET, ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
+    for input_file_path in get_file_paths(input_dir_path, ext='.txt'):
+        output_file_path = os.path.join(output_dir_path, os.path.basename(input_file_path).replace('.txt', '.jsonl'))
+        if output_file_path in done_set:
+            print('`{}` already exists. Download process is skipped.'.format(output_file_path))
+            continue
+
+        with open(input_file_path, 'r') as fp:
+            tweet_ids = [line.strip() for line in fp]
+
+        index = 0
+        request_count = 0
+        json_list = list()
+        print('Processing {}'.format(input_file_path))
+        while index < len(tweet_ids):
+            ids_str = ','.join(tweet_ids[index: index + 100])
+            tweet_data = send_query(client, ids_str)
+            request_count += 1
+            if isinstance(tweet_data, list):
+                json_list.extend(tweet_data)
+                index += 100
+            elif tweet_data == 429:
+                print('{} requests were sent after the interval'.format(request_count))
+                print('Sleeping for 15 min')
+                # With standard APIs, 15 requests / 15 min
+                time.sleep(60.0 * 15.5)
+                request_count = 0
+            elif tweet_data == 504:
+                client = OAuth1Session(CONSUMER_KEY, CONSUMER_SECRET, ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
+            else:
+                print('Error code: {}'.format(tweet_data))
+
+        with open(output_file_path, 'w') as fp:
+            for json_obj in json_list:
+                fp.write('{}\n'.format(json.dumps(json_obj)))
+
+
+def main(args):
+    input_dir_paths = get_dir_paths(args.input)
+    output_root_dir_path = args.output
+    for input_dir_path in input_dir_paths:
+        output_dir_path = os.path.join(output_root_dir_path, input_dir_path)
+        download_tweet_data(input_dir_path, output_dir_path)
+
+
+if __name__ == '__main__':
+    argparser = get_argparser()
+    main(argparser.parse_args())
