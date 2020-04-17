@@ -1,4 +1,7 @@
 # covid19-backend
+
+[![Build Status](https://travis-ci.com/ucinlp/covid19-backend.svg?branch=master)](https://travis-ci.com/ucinlp/covid19-backend)
+
 Code for running all the background services for Covid19 efforts.
 
 To run the server you will need to:
