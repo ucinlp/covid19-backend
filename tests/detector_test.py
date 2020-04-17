@@ -4,7 +4,7 @@ import numpy as np
 from overrides import overrides
 
 from backend.ml.detector import Detector
-from backend.ml.misconception import Misconception, MisconceptionDataset
+from backend.ml.misconception import MisconceptionDataset
 
 
 class MockDetector(Detector):
