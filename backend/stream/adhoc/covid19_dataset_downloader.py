@@ -1,11 +1,13 @@
 import argparse
 import json
 import os
-import time
 import sys
+import time
 
 from requests.exceptions import Timeout
 from requests_oauthlib import OAuth1Session
+
+from backend.stream.utils.file_util import get_dir_paths, get_file_paths
 
 CONSUMER_KEY = os.environ.get('TWITTER_CONSUMER_KEY', None)
 CONSUMER_SECRET = os.environ.get('TWITTER_CONSUMER_SECRET', None)
@@ -18,23 +20,6 @@ def get_argparser():
     parser.add_argument('--input', required=True, help='input root dir path')
     parser.add_argument('--output', required=True, help='output root dir path')
     return parser
-
-
-def get_dir_paths(dir_path):
-    file_path_list = list()
-    for file_name in os.listdir(dir_path):
-        if os.path.isdir(file_name) and not file_name.startswith('.'):
-            file_path_list.append(os.path.join(dir_path, file_name))
-    return file_path_list
-
-
-def get_file_paths(dir_path, ext=None):
-    file_path_list = list()
-    for file_name in os.listdir(dir_path):
-        file_path = os.path.join(dir_path, file_name)
-        if os.path.isfile(file_path) and (ext is None or file_name.endswith(ext)):
-            file_path_list.append(file_path)
-    return file_path_list
 
 
 def get_done_set(output_dir_path):
