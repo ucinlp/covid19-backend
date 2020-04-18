@@ -24,10 +24,11 @@ def get_related_article_urls(news_api_config):
     params_config = news_api_config['params']
     num_hits = -1
     article_count = 0
+    page_count = 1
     failure_count = 0
     while num_hits == -1 or article_count < num_hits:
         try:
-            result = news_api_client.fetch(endpoint, page=article_count, **params_config)
+            result = news_api_client.fetch(endpoint, page=page_count, **params_config)
             num_hits = result['totalResults']
             articles = result['articles']
             article_count += len(articles)
@@ -38,6 +39,7 @@ def get_related_article_urls(news_api_config):
             if failure_count > 5:
                 break
             news_api_client = NewsApiClient()
+        page_count += 1
     return article_url_list
 
 
@@ -46,13 +48,19 @@ def download_article_bodies(article_urls, diffbot_config):
     diffbot_client = DiffbotArticleClient()
     params_config = diffbot_config['params']
     for article_url in article_urls:
-        article_with_body = diffbot_client.fetch(article_url, **params_config)
-        article_body_list.append(article_with_body['object']['text'])
+        try:
+            article_with_body = diffbot_client.fetch(article_url, **params_config)
+            # As of Apr 17, 2020, "At the moment, only a single object will be returned for Article API requests."
+            article_body_list.append(article_with_body)
+        except Exception as e:
+            print(e)
     return article_body_list
 
 
 def main(args):
-    config = yaml.load(args.config)
+    with open(args.config, 'r') as fp:
+        config = yaml.load(fp, Loader=yaml.FullLoader)
+
     if args.json is not None:
         overwrite_config(config, args.json)
 
