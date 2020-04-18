@@ -6,3 +6,10 @@ pyyaml>=5.3.1
 
 # Model-related
 transformers[torch]>=2.7.0
+
+# For testing
+flake8
+pytest
+
+# Other
+overrides>=2.8.0
