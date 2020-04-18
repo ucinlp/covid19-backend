@@ -42,7 +42,7 @@ def send_query(client, ids_str):
     except Timeout:
         print('Timeout error')
         return 504
-    except:
+    except Exception as e:
         print("Unexpected error:", sys.exc_info()[0])
     return None
 
@@ -55,7 +55,8 @@ def download_tweet_data(input_dir_path, output_dir_path):
     done_set = get_done_set(output_dir_path)
     client = OAuth1Session(CONSUMER_KEY, CONSUMER_SECRET, ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
     for input_file_path in get_file_paths(input_dir_path, ext='.txt'):
-        output_file_path = os.path.join(output_dir_path, os.path.basename(input_file_path).replace('.txt', '.jsonl'))
+        output_file_path =\
+            os.path.join(output_dir_path, os.path.basename(input_file_path).replace('.txt', '.jsonl'))
         if output_file_path in done_set:
             print('`{}` already exists. Download process is skipped.'.format(output_file_path))
             continue

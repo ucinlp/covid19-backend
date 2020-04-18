@@ -34,7 +34,8 @@ def get_related_article_urls(news_api_config):
             article_count += len(articles)
             for article in articles:
                 article_url_list.append(article['url'])
-        except:
+        except Exception as e:
+            print(e)
             failure_count += 1
             if failure_count > 5:
                 break
