@@ -42,7 +42,7 @@ def send_query(client, ids_str):
     except Timeout:
         print('Timeout error')
         return 504
-    except Exception as e:
+    except Exception:
         print("Unexpected error:", sys.exc_info()[0])
     return None
 
