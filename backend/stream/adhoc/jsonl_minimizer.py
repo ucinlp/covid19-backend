@@ -20,7 +20,7 @@ def build_sub_dict(main_dict, ref_dict):
     for key, value in ref_dict.items():
         if isinstance(value, dict):
             sub_dict[key] = build_sub_dict(main_dict[key], value)
-        elif value is True:
+        elif value is True and key in main_dict:
             sub_dict[key] = main_dict[key]
     return sub_dict
 
