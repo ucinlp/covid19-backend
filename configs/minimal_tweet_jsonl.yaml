@@ -10,5 +10,5 @@ retweeted: True
 retweeted_status: True
 lang: True
 user:
-	followers_count: True
-	friends_count: True
+    followers_count: True
+    friends_count: True
