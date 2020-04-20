@@ -65,7 +65,7 @@ def main(args):
         input_dir_paths = get_dir_paths(args.input)
         output_root_dir_path = args.output
         for input_dir_path in input_dir_paths:
-            output_dir_path = os.path.join(output_root_dir_path, input_dir_path)
+            output_dir_path = os.path.join(output_root_dir_path, os.path.basename(input_dir_path))
             process_multiple_jsonls(input_dir_path, config, output_dir_path)
 
 
