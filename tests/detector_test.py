@@ -44,6 +44,7 @@ class DetectorTest(TestCase):
         self.assertTrue(output_dict['relevant'])
         expected_predictions = [{
             'misinformation_score': 0.0,
-            'misinformation': self.misconceptions[0],
+            'misinformation_links': ('https://www.google.com',),
+            'misinformation_sentence': "don't lick faces",
         }]
         self.assertListEqual(output_dict['predictions'], expected_predictions)
