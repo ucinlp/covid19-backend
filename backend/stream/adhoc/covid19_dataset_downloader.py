@@ -43,7 +43,7 @@ def send_query(client, ids_str):
         print('Timeout error')
         return 504
     except Exception:
-        print("Unexpected error:", sys.exc_info()[0])
+        print('Twitter API error: {}'.format(sys.exc_info()[0]))
     return None
 
 

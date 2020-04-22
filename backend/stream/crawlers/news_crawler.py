@@ -1,5 +1,6 @@
 import argparse
 import json
+import sys
 
 import yaml
 
@@ -34,8 +35,8 @@ def get_related_article_urls(news_api_config):
             article_count += len(articles)
             for article in articles:
                 article_url_list.append(article['url'])
-        except Exception as e:
-            print(e)
+        except Exception:
+            print('NewsAPI error: {}'.format(sys.exc_info()[0]))
             failure_count += 1
             if failure_count > 5:
                 break
@@ -53,8 +54,8 @@ def download_article_bodies(article_urls, diffbot_config):
             article_with_body = diffbot_client.fetch(article_url, **params_config)
             # As of Apr 17, 2020, "At the moment, only a single object will be returned for Article API requests."
             article_body_list.append(article_with_body)
-        except Exception as e:
-            print(e)
+        except Exception:
+            print('Diffbot error: {}'.format(sys.exc_info()[0]))
     return article_body_list
 
 
