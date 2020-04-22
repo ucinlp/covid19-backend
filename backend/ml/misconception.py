@@ -21,9 +21,11 @@ class Misconception:
     id: str
     canonical_sentence: str
     sources: Tuple[str]
-    category: str
+    category: Tuple[str]
     pos_variations: Tuple[str]
     neg_variations: Tuple[str]
+    reliability_score: int
+    origin: str
 
 
 @dataclass(eq=True, frozen=True)

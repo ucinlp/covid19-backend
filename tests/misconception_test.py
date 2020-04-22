@@ -12,9 +12,11 @@ class MisconceptionDatasetTest(TestCase):
             id=1,
             canonical_sentence="don't lick faces",
             sources=("https://www.google.com",),
-            category="",
+            category=tuple([""]),
             pos_variations=tuple(),
-            neg_variations=tuple()
+            neg_variations=tuple(),
+            reliability_score=1,
+            origin="Sameer"
         )
         assert misconceptions[0] == expected
 
