@@ -4,11 +4,12 @@ Insert the misinformation JSONL to a Google Sheet
 import pickle
 import os.path
 
-from ..ml.misconception import Misconception, MisconceptionDataset
+from ..ml.misconception import MisconceptionDataset
 
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
+
 
 class MisconceptionDatasetToGSheets:
 
@@ -20,7 +21,7 @@ class MisconceptionDatasetToGSheets:
         self.SPREADSHEET_ID = '1ujDu_vVqSP3pfbZvkrtpZBNnwWt-1kDIDUvzOnVY5uc'
         self.MAX_SOURCES = 5
         self.MAX_VARIATIONS = 5
-        
+
         self.creds = None
         self.service = None
 
@@ -48,7 +49,7 @@ class MisconceptionDatasetToGSheets:
         self.sheets = self.service.spreadsheets()
 
     def write_dataset(self, misconceptions: MisconceptionDataset,
-                    range_name: str) -> None:
+                      range_name: str) -> None:
         values = []
 
         # Header
@@ -84,9 +85,8 @@ class MisconceptionDatasetToGSheets:
         body = {
             'values': values
         }
-        result = self.sheets.values().update(    
-        spreadsheetId=self.SPREADSHEET_ID, range=range_name,
-        valueInputOption="USER_ENTERED", body=body).execute()
+        result = self.sheets.values().update(spreadsheetId=self.SPREADSHEET_ID, range=range_name,
+                                             valueInputOption="USER_ENTERED", body=body).execute()
         print('{0} cells updated.'.format(result.get('updatedCells')))
 
     def read_dataset(self):
@@ -101,9 +101,10 @@ class MisconceptionDatasetToGSheets:
         #     for row in values:
         #         print(row)
 
+
 if __name__ == '__main__':
-    dataset_file = 'misconceptions.jsonl' #'tests/fixtures/misconceptions.jsonl'
-    range_name = 'Wikipedia!A1' #'Class Data!A2:E'
+    dataset_file = 'misconceptions.jsonl'  # 'tests/fixtures/misconceptions.jsonl'
+    range_name = 'Wikipedia!A1'  # 'Class Data!A2:E'
 
     with open(dataset_file, 'r') as f:
         misconceptions = MisconceptionDataset.from_jsonl(f)
