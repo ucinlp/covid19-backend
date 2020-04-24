@@ -8,7 +8,6 @@ import sys
 
 import flask
 import flask_cors
-from gevent.pywsgi import WSGIServer
 
 from backend.ml.bertscore import BertScoreDetector
 from backend.ml.misconception import MisconceptionDataset
@@ -23,37 +22,28 @@ logger.addHandler(handler)
 logger.propagate = False
 
 
-def main(port: int):
-    app = make_app()
-    http_server = WSGIServer(('0.0.0.0', port), app, log=logger, error_log=logger)
-    logger.info('Server started on port %i.', port)
-    http_server.serve_forever()
+app = flask.Flask(__name__)
+flask_cors.CORS(app)
 
+# TODO: Periodically reload.
+with open('misconceptions.jsonl', 'r') as f:
+    app.misconceptions = MisconceptionDataset.from_jsonl(f)
+app.detector = BertScoreDetector('bert-base-uncased')
 
-def make_app():
-    app = flask.Flask(__name__)
-    flask_cors.CORS(app)
+@app.route('/predict/', methods=['POST'])
+def predict():
+    raw = flask.request.get_data()
+    data = json.loads(raw) if raw else {}
+    logger.info('request: %s', json.dumps(data))
+    prediction = app.detector.predict(data['input'], app.misconceptions)
 
-    # TODO: Periodically reload.
-    with open('misconceptions.jsonl', 'r') as f:
-        app.misconceptions = MisconceptionDataset.from_jsonl(f)
-    app.detector = BertScoreDetector('bert-base-uncased')
-
-    @app.route('/predict/', methods=['POST'])
-    def predict():
-        raw = flask.request.get_data()
-        data = json.loads(raw) if raw else {}
-        logger.info('request: %s', json.dumps(data))
-        prediction = app.detector.predict(data['input'], app.misconceptions)
-
-        return flask.jsonify(prediction)
-
-    return app
+    return flask.jsonify(prediction)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument('--host', type=str, default='localhost', help='ip to listen on')
     parser.add_argument('--port', type=int, default=2020, help='port to serve the backend on')
     args = parser.parse_args()
 
-    main(port=args.port)
+    app.run(host=args.host, port=args.port)
