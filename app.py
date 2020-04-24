@@ -30,6 +30,7 @@ with open('misconceptions.jsonl', 'r') as f:
     app.misconceptions = MisconceptionDataset.from_jsonl(f)
 app.detector = BertScoreDetector('bert-base-uncased')
 
+
 @app.route('/predict/', methods=['POST'])
 def predict():
     raw = flask.request.get_data()

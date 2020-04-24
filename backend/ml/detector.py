@@ -8,6 +8,10 @@ import numpy as np
 from backend.ml.misconception import MisconceptionDataset
 
 
+# TODO: @rloganiv - The detector/misconception interaction would be better handled by using the
+# observer design pattern to update the misconception encodings whenever the misconception dataset
+# issues a notification that it has been updated. The issue with the current approach is that it
+# may cache redundant data.
 class Detector:
     """
     Abstract base class for a misconception detector.
