@@ -89,8 +89,8 @@ class SentenceBertDetector(Detector, torch.nn.Module):
         )
         mask = model_input['attention_mask']
         embeddings, *_ = self._model(**model_input)
-        masked_embedings = embeddings * mask.unsqueeze(-1)
-        pooled_embeddings = embeddings.mean(1)  # average over sequence dim
+        masked_embeddings = embeddings * mask.unsqueeze(-1)
+        pooled_embeddings = masked_embeddings.mean(1)  # average over sequence dim
         return pooled_embeddings
 
     @overrides
