@@ -4,7 +4,9 @@
 
 Code for running all the background services for Covid19 efforts.
 
-To run the server you will need to:
+## Running locally
+
+To run the server locally you will need to:
 
 1. Set up your virtual environment
 ```{bash}
@@ -16,6 +18,29 @@ pip install -r requirements.txt
 2. Start the server
 ```{bash}
 python app.py
+```
+
+## Running via Docker
+
+If the backend is running on the same server as the frontend, or you do not need SSL certification:
+```{bash}
+docker run -p 2020:2020 \
+           -v $HOME/.cache:/root/.cache \
+           --rm \
+           rloganiv/covid19-backend:latest
+```
+
+If you need SSL certification:
+
+```{bash}
+docker run -p 2020:2020 \
+           -v $HOME/.cache:/root/.cache \
+           -v [DIRECTORY CONTAINING SSL CERTS]:/certs \
+           --rm \
+           rloganiv/covid19-backend:latest \
+           -b 0.0.0.0:2020 \
+           --certfile /certs/[CERTFILE NAME] \
+           --keyfile /certs/[KEYFILE NAME]
 ```
 
 ## Syncing to Google Sheets
