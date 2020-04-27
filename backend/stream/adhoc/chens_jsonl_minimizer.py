@@ -19,7 +19,8 @@ def get_argparser():
 def build_sub_dict(main_dict, ref_dict):
     sub_dict = dict()
     for key, value in ref_dict.items():
-        sub_dict[key] = build_sub_dict(main_dict[key], value) if isinstance(value, dict) else main_dict.get(key, value)
+        sub_dict[key] = build_sub_dict(main_dict[key], value) if isinstance(value, dict) \
+            else main_dict.get(key, value)
     return sub_dict
 
 
