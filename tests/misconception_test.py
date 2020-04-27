@@ -10,10 +10,10 @@ class MisconceptionDatasetTest(TestCase):
         assert len(misconceptions) == 1
         expected = Misconception(
             id=1,
-            canonical_sentence="don't lick faces",
+            canonical_sentence="Don't lick faces",
             sources=("https://www.google.com",),
-            category=tuple([""]),
-            pos_variations=tuple(),
+            category=tuple(),
+            pos_variations=("Don't lick faces",),
             neg_variations=tuple(),
             reliability_score=1,
             origin="Sameer"
@@ -21,5 +21,5 @@ class MisconceptionDatasetTest(TestCase):
         assert misconceptions[0] == expected
 
     def test_hashable(self):
-        misconceptions = MisconceptionDataset(tuple(), uid=123)
+        misconceptions = MisconceptionDataset(tuple(), tuple(), uid=123)
         assert hash(misconceptions) == 123
