@@ -66,8 +66,13 @@ def bertscore(candidate: MaskedEmbeddings,
         is: (num_refs, max_ref_len, embedding_dim)
 
     # Returns
-    f1 : torch.FloatTensor
-        Tensor of pairwise f1 scores, with shape: (num_cands, num_refs)
+    output_dict : Dictionary
+        f1 : torch.FloatTensor
+            Tensor of pairwise f1 scores, with shape: (num_cands, num_refs)
+        precision : torch.FloatTensor
+            Tensor of the soft precision scores, with shape: (num_cands, num_refs)
+        recall : torch.FloatTensor
+            Tensor of the soft recall scores, with shape: (num_cands, num_refs)
     """
     if candidate.embeddings.size(-1) != reference.embeddings.size(-1):
         raise ValueError("Embedding dimensions must match")
@@ -84,23 +89,37 @@ def bertscore(candidate: MaskedEmbeddings,
     mask = torch.einsum('ir,jc->ijrc', reference.mask, candidate.mask)
     dot_products = dot_products - 1e13 * (1 - mask)
 
-    # Compute soft precision and recall scores by taking max along reference and candidate sequence
-    # length dimensions, respectively, and summing.
+    # Transpose the tensors since intuitively the `num_cands` dimension (e.g., batch size) should
+    # be first. We opted not to do this earlier to make the above computations match the equations
+    # in the BERTScore paper.
     # shape: (num_refs, num_cands)
-    precision = soft_precision(dot_products, candidate.mask)
-    recall = soft_recall(dot_products, reference.mask)
+    precision = soft_precision(dot_products, candidate.mask).transpose(0, 1)
+    recall = soft_recall(dot_products, reference.mask).transpose(0, 1)
     f1 = 2 * precision * recall / (precision + recall)
 
-    # Transpose the f1 tensor since intuitively the `num_cands` dimension (e.g., batch size) should
-    # be first We opted not to do this earlier to make the above computations match the equations
-    # in the BERTScore paper.
-    return f1.transpose(0, 1)
+    output_dict = {'precision': precision, 'recall': recall, 'f1': f1}
+
+    return output_dict
 
 
 class BertScoreDetector(Detector):
-    def __init__(self, model_name: str) -> None:
+    """
+    BERTScore Detector
+
+    # Parameters
+    model_name : `str`
+        Name of model passed to HuggingFace's AutoModel/AutoTokenizer.
+    score_type : `str`, default='f1'
+        Optional. Type of score to return, one of: 'precision', 'recall', 'f1'.
+    """
+    def __init__(self,
+                 model_name: str,
+                 score_type: str = 'f1') -> None:
         super().__init__()
+        if score_type not in ('precision', 'recall', 'f1'):
+            raise ValueError(f'Invalid score type "{score_type}."')
         self._model_name = model_name
+        self._score_type = score_type
         self._tokenizer = AutoTokenizer.from_pretrained(model_name)
         self._model = AutoModel.from_pretrained(model_name)
 
@@ -121,7 +140,8 @@ class BertScoreDetector(Detector):
                encoded_sentences: MaskedEmbeddings,
                encoded_misconceptions: MaskedEmbeddings) -> np.ndarray:
         with torch.no_grad():
-            score = bertscore(encoded_sentences, encoded_misconceptions)
+            score_dict = bertscore(encoded_sentences, encoded_misconceptions)
+        score = score_dict[self._score_type]
         return score.cpu().numpy()
 
     @overrides

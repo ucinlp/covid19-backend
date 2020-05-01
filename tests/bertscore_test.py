@@ -25,12 +25,25 @@ class BertScoreTest(TestCase):
         mask = torch.FloatTensor([[1, 1, 0], [1, 1, 1]])
         candidate = MaskedEmbeddings(embeddings, mask)
         reference = candidate
-        score = bertscore(candidate, reference)
-        expected_score = torch.FloatTensor([
-            [1, .8],
-            [.8, 1]
+        score_dict = bertscore(candidate, reference)
+
+        expected_precision = torch.FloatTensor([
+            [1, 1],
+            [2/3, 1]
         ])
-        assert torch.allclose(score, expected_score)
+        assert torch.allclose(score_dict['precision'], expected_precision)
+
+        expected_recall = torch.FloatTensor([
+            [1, 2/3],
+            [1, 1]
+        ])
+        assert torch.allclose(score_dict['recall'], expected_recall)
+
+        expected_f1 = torch.FloatTensor([
+            [1, 4/5],
+            [4/5, 1]
+        ])
+        assert torch.allclose(score_dict['f1'], expected_f1)
 
     def test_soft_precision_and_recall(self):
         # tests that precision is 2/3 and recall is 1 for a reference sequence of length two and a
