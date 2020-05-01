@@ -11,6 +11,7 @@ news_api:
         language: 'en'
         sortBy: 'publishedAt'
         pageSize: 100
+    db_table_name: 'everything'
 
 diffbot:
     params:
