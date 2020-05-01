@@ -19,11 +19,11 @@ def get_argparser():
     parser.add_argument('--json', help='dictionary to overwrite config')
     parser.add_argument('--tol', type=int, default=0, help='maximum number of News API errors you can tolerate')
     parser.add_argument('--db', required=True, help='output DB file path')
-    parser.add_argument('--output', required=True, help='output file path')
+    parser.add_argument('--output', required=True, help='output root dir path')
     return parser
 
 
-def get_related_article_urls(news_api_config, max_tol, db_file_path):
+def get_related_article_urls(news_api_config, max_tol, timestamp, category, db_file_path):
     article_url_list = list()
     article_dict_list = list()
     news_api_client = NewsApiClient()
@@ -35,7 +35,6 @@ def get_related_article_urls(news_api_config, max_tol, db_file_path):
     failure_count = 0
     while num_hits == -1 or article_count < num_hits:
         try:
-            timestamp = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
             result = news_api_client.fetch(endpoint, page=page_count, **params_config)
             num_hits = result['totalResults']
             articles = result['articles']
@@ -51,7 +50,8 @@ def get_related_article_urls(news_api_config, max_tol, db_file_path):
                 break
             news_api_client = NewsApiClient()
         page_count += 1
-    update_article_url_db(article_dict_list, news_api_config['db_table_name'], db_file_path)
+
+    update_article_url_db(article_dict_list, category, db_file_path)
     return article_url_list
 
 
@@ -69,6 +69,13 @@ def download_article_bodies(article_urls, diffbot_config):
     return article_body_list
 
 
+def write_jsonl_file(articles, output_file_path):
+    make_parent_dirs(output_file_path)
+    with open(output_file_path, 'w') as fp:
+        for article in articles:
+            fp.write('{}\n'.format(json.dumps(article)))
+
+
 def main(args):
     with open(args.config, 'r') as fp:
         config = yaml.load(fp, Loader=yaml.FullLoader)
@@ -76,13 +83,11 @@ def main(args):
     if args.json is not None:
         overwrite_config(config, args.json)
 
-    article_urls = get_related_article_urls(config['news_api'], args.tol, os.path.abspath(args.db))
+    category = config['category']
+    timestamp = datetime.utcnow().strftime('uct-%Y%m%d-%H%M%S')
+    article_urls = get_related_article_urls(config['news_api'], args.tol, timestamp, category, os.path.abspath(args.db))
     articles = download_article_bodies(article_urls, config['diffbot'])
-    output_file_path = args.output
-    make_parent_dirs(output_file_path)
-    with open(output_file_path, 'w') as fp:
-        for article in articles:
-            fp.write('{}\n'.format(json.dumps(article)))
+    write_jsonl_file(articles, os.path.join(args.output, category, timestamp + '.jsonl'))
 
 
 if __name__ == '__main__':
