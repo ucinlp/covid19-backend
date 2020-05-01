@@ -18,5 +18,6 @@ def update_article_url_db(article_dicts, table_name, db_file_path):
     engine = create_engine('sqlite:///{}'.format(db_file_path), echo=True)
     table = create_table(table_name, engine)
     with engine.connect() as connection:
-        statement = table.update().values(article_dicts)
-        result = connection.execute(statement)
+        for article_dict in article_dicts:
+            statement = table.update().values(article_dict)
+            result = connection.execute(statement)

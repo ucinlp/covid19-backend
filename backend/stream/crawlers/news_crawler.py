@@ -17,7 +17,7 @@ def get_argparser():
     parser = argparse.ArgumentParser(description='News crawler')
     parser.add_argument('--config', required=True, help='config file path')
     parser.add_argument('--json', help='dictionary to overwrite config')
-    parser.add_argument('--tol', type=int, default=1, help='maximum number of News API errors you can tolerate')
+    parser.add_argument('--tol', type=int, default=0, help='maximum number of News API errors you can tolerate')
     parser.add_argument('--db', required=True, help='output DB file path')
     parser.add_argument('--output', required=True, help='output file path')
     return parser
@@ -46,7 +46,6 @@ def get_related_article_urls(news_api_config, max_tol, db_file_path):
                 article_dict_list.append({'url': article_url, 'title': article['title'],
                                           'publishedAt': article.get('publishedAt', ''), 'addedAt': timestamp})
         except Exception:
-            print('News API error: {}'.format(sys.exc_info()[0]))
             failure_count += 1
             if failure_count > max_tol:
                 break
