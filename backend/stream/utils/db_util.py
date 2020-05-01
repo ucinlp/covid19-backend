@@ -21,7 +21,6 @@ def create_table(table_name, engine):
 
 def update_article_url_db(article_dicts, publisher, db_file_path):
     file_util.make_parent_dirs(db_file_path)
-    engine = create_engine('sqlite:///{}'.format(db_file_path), echo=True)
     base_cls = declarative_base()
 
     class Article(base_cls):
@@ -32,14 +31,21 @@ def update_article_url_db(article_dicts, publisher, db_file_path):
         publishedAt = Column(String)
         addedAt = Column(String)
 
+    engine = create_engine('sqlite:///{}'.format(db_file_path), echo=True)
+    metadata = MetaData(engine).reflect()
+
     # Create table
-    base_cls.metadata.create_all(bind=engine)
+    if publisher not in metadata.tables:
+        base_cls.metadata.create_all(bind=engine)
 
     # Add articles to the table
-    articles = [Article(**article_dict) for article_dict in article_dicts]
     session = sessionmaker(bind=engine)()
+    article_list = list()
+    for article_dict in article_dicts:
+        if session.query(Article.url).filter_by(url=article_dict['url']).scalar() is None:
+            article_list.append(Article(**article_dict))
     try:
-        session.add_all(articles)
+        session.add_all(article_list)
         session.commit()
     except SQLAlchemyError as e:
         print(e)
