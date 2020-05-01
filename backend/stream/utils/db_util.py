@@ -32,11 +32,7 @@ def update_article_url_db(article_dicts, publisher, db_file_path):
         addedAt = Column(String)
 
     engine = create_engine('sqlite:///{}'.format(db_file_path), echo=True)
-    metadata = MetaData(engine).reflect()
-
-    # Create table
-    if publisher not in metadata.tables:
-        base_cls.metadata.create_all(bind=engine)
+    base_cls.metadata.create_all(bind=engine)
 
     # Add articles to the table
     session = sessionmaker(bind=engine)()
