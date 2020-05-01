@@ -22,9 +22,9 @@ def create_table(table_name, engine):
 def update_article_url_db(article_dicts, publisher, db_file_path):
     file_util.make_parent_dirs(db_file_path)
     engine = create_engine('sqlite:///{}'.format(db_file_path), echo=True)
-    Base = declarative_base()
+    base_cls = declarative_base()
 
-    class Article(Base):
+    class Article(base_cls):
         __tablename__ = publisher
 
         url = Column(String, primary_key=True)
@@ -33,7 +33,7 @@ def update_article_url_db(article_dicts, publisher, db_file_path):
         addedAt = Column(String)
 
     # Create table
-    Base.metadata.create_all(bind=engine)
+    base_cls.metadata.create_all(bind=engine)
 
     # Add articles to the table
     articles = [Article(**article_dict) for article_dict in article_dicts]
