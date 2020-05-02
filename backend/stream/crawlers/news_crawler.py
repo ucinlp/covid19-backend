@@ -85,7 +85,8 @@ def main(args):
 
     category = config['category']
     timestamp = datetime.utcnow().strftime('uct-%Y%m%d-%H%M%S')
-    article_urls = get_related_article_urls(config['news_api'], args.tol, timestamp, category, os.path.abspath(args.db))
+    article_urls = get_related_article_urls(config['news_api'], args.tol, timestamp,
+                                            category, os.path.abspath(args.db))
     articles = download_article_bodies(article_urls, config['diffbot'])
     write_jsonl_file(articles, os.path.join(args.output, category, timestamp + '.jsonl'))
 
