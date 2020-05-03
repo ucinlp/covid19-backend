@@ -24,7 +24,6 @@ def get_argparser():
 
 
 def get_related_article_urls(news_api_config, max_tol, timestamp, category, db_file_path):
-    article_url_list = list()
     article_dict_list = list()
     news_api_client = NewsApiClient()
     endpoint = news_api_config['endpoint']
@@ -40,9 +39,7 @@ def get_related_article_urls(news_api_config, max_tol, timestamp, category, db_f
             articles = result['articles']
             article_count += len(articles)
             for article in articles:
-                article_url = article['url']
-                article_url_list.append(article_url)
-                article_dict_list.append({'url': article_url, 'title': article['title'],
+                article_dict_list.append({'url': article['url'], 'title': article['title'],
                                           'publishedAt': article.get('publishedAt', ''), 'addedAt': timestamp})
         except Exception:
             failure_count += 1
@@ -51,8 +48,8 @@ def get_related_article_urls(news_api_config, max_tol, timestamp, category, db_f
             news_api_client = NewsApiClient()
         page_count += 1
 
-    update_article_url_db(article_dict_list, category, db_file_path)
-    return article_url_list
+    article_urls = update_article_url_db(article_dict_list, category, db_file_path)
+    return article_urls
 
 
 def download_article_bodies(article_urls, diffbot_config):
