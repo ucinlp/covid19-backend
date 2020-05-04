@@ -71,6 +71,7 @@ def write_jsonl_file(articles, output_file_path):
     with open(output_file_path, 'w') as fp:
         for article in articles:
             fp.write('{}\n'.format(json.dumps(article)))
+    print('{} new articles were stored at {}'.format(len(articles), output_file_path))
 
 
 def main(args):
