@@ -82,7 +82,7 @@ def main(args):
         overwrite_config(config, args.json)
 
     category = config['category']
-    timestamp = datetime.utcnow().strftime('uct-%Y%m%d-%H%M%S')
+    timestamp = datetime.utcnow().strftime('utc-%Y%m%d-%H%M%S')
     article_urls = get_related_article_urls(config['news_api'], args.tol, timestamp,
                                             category, os.path.abspath(args.db))
     articles = download_article_bodies(article_urls, config['diffbot'])
