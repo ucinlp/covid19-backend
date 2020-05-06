@@ -12,7 +12,7 @@ def get_argparser():
     parser.add_argument('--input', required=True, help='input dir/file path')
     parser.add_argument('--config', required=True, help='config file path')
     parser.add_argument('--lang', required=False, help='target language')
-    parser.add_argument('-exclude_rt', action='stored_true', help='exclude retweets')
+    parser.add_argument('-exclude_rt', action='store_true', help='exclude retweets')
     parser.add_argument('--output', required=True, help='output dir/file path')
     return parser
 
