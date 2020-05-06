@@ -45,7 +45,7 @@ def process_single_jsonl(input_file_path, config, target_lang, excludes_rt, outp
                 continue
             elif excludes_rt:
                 retweeted_status = main_dict.get('retweeted_status', None)
-                if retweeted_status is None or len(retweeted_status) == 0:
+                if retweeted_status is not None:
                     continue
 
             sub_dict = build_sub_dict(main_dict, config)
