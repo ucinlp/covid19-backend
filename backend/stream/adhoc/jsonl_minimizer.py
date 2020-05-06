@@ -12,7 +12,7 @@ def get_argparser():
     parser.add_argument('--input', required=True, help='input dir/file path')
     parser.add_argument('--config', required=True, help='config file path')
     parser.add_argument('--lang', required=False, help='target language')
-    parser.add_argument('-include_rt', action='stored_true', help='include retweets')
+    parser.add_argument('-exclude_rt', action='stored_true', help='exclude retweets')
     parser.add_argument('--output', required=True, help='output dir/file path')
     return parser
 
@@ -35,7 +35,7 @@ def write_jsonl_file(json_objs, output_file_path, first=True):
             fp.write('{}\n'.format(json.dumps(json_obj)))
 
 
-def process_single_jsonl(input_file_path, config, target_lang, includes_rt, output_file_path, buffer_size=10000):
+def process_single_jsonl(input_file_path, config, target_lang, excludes_rt, output_file_path, buffer_size=10000):
     buffer_list = list()
     first = True
     with open(input_file_path, 'r') as fp:
@@ -43,7 +43,7 @@ def process_single_jsonl(input_file_path, config, target_lang, includes_rt, outp
             main_dict = json.loads(line)
             if target_lang is not None and main_dict.get('lang', None) != target_lang:
                 continue
-            elif not includes_rt:
+            elif excludes_rt:
                 retweeted_status = main_dict.get('retweeted_status', None)
                 if retweeted_status is None or len(retweeted_status) == 0:
                     continue
@@ -57,10 +57,10 @@ def process_single_jsonl(input_file_path, config, target_lang, includes_rt, outp
         write_jsonl_file(buffer_list, output_file_path, first=first)
 
 
-def process_multiple_jsonls(input_dir_path, config, target_lang, includes_rt, output_dir_path):
+def process_multiple_jsonls(input_dir_path, config, target_lang, excludes_rt, output_dir_path):
     for input_file_path in get_file_paths(input_dir_path):
         output_file_path = os.path.join(output_dir_path, os.path.basename(input_file_path))
-        process_single_jsonl(input_file_path, config, target_lang, includes_rt, output_file_path)
+        process_single_jsonl(input_file_path, config, target_lang, excludes_rt, output_file_path)
 
 
 def main(args):
@@ -68,16 +68,16 @@ def main(args):
         config = yaml.load(fp, Loader=yaml.FullLoader)
 
     input_path = args.input
-    includes_rt = args.include_rt
+    excludes_rt = args.exclude_rt
     is_file = os.path.isfile(input_path)
     if is_file:
-        process_single_jsonl(input_path, config, args.lang, includes_rt, args.output)
+        process_single_jsonl(input_path, config, args.lang, excludes_rt, args.output)
     else:
         input_dir_paths = get_dir_paths(input_path)
         output_root_dir_path = args.output
         for input_dir_path in input_dir_paths:
             output_dir_path = os.path.join(output_root_dir_path, os.path.basename(input_dir_path))
-            process_multiple_jsonls(input_dir_path, config, args.lang, includes_rt, output_dir_path)
+            process_multiple_jsonls(input_dir_path, config, args.lang, excludes_rt, output_dir_path)
 
 
 if __name__ == '__main__':
