@@ -1,22 +1,9 @@
-from sqlalchemy import create_engine, MetaData, Table, Column, String
+from sqlalchemy import create_engine, Column, Float, JSON, String
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
 from backend.stream.utils import file_util
-
-
-def create_table(table_name, engine):
-    meta = MetaData()
-    table = Table(
-       table_name, meta,
-       Column('url', String, primary_key=True),
-       Column('title', String),
-       Column('publishedAt', String),
-       Column('addedAt', String)
-    )
-    meta.create_all(engine)
-    return table
 
 
 def update_article_url_db(article_dicts, publisher, db_file_path):
@@ -51,3 +38,35 @@ def update_article_url_db(article_dicts, publisher, db_file_path):
     finally:
         session.close()
     return article_url_list
+
+
+def update_misinfo_db(entities, model_id, db_file_path):
+    file_util.make_parent_dirs(db_file_path)
+    base_cls = declarative_base()
+
+    class Misinfo(base_cls):
+        __tablename__ = model_id
+
+        id = Column(String, primary_key=True)
+        confidence = Column(Float)
+        detectedAt = Column(String)
+        misc = Column(JSON)
+
+    engine = create_engine('sqlite:///{}'.format(db_file_path), echo=True)
+    base_cls.metadata.create_all(bind=engine)
+
+    # Add misinformation to the table
+    session = sessionmaker(bind=engine)()
+    added_entity_list = list()
+    for entity in entities:
+        entity_id = entity['id']
+        if session.query(Misinfo.id).filter_by(id=entity_id).scalar() is None:
+            added_entity_list.append(Misinfo(**entity))
+    try:
+        session.add_all(added_entity_list)
+        session.commit()
+    except SQLAlchemyError as e:
+        print(e)
+    finally:
+        session.close()
+    return added_entity_list
