@@ -13,6 +13,7 @@ To run the server locally you will need to:
 conda create -n covid19-backend python=3.7
 conda activate covid19-backend
 pip install -r requirements.txt
+pip install -e .
 ```
 
 2. Start the server
