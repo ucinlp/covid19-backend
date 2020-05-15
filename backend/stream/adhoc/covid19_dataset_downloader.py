@@ -66,15 +66,16 @@ def download_tweet_data(input_dir_path, output_dir_path):
 
         index = 0
         request_count = 0
+        batch_size = 100
         json_list = list()
         print('Processing {}'.format(input_file_path))
         while index < len(tweet_ids):
-            ids_str = ','.join(tweet_ids[index: index + 100])
+            ids_str = ','.join(tweet_ids[index: index + batch_size])
             tweet_data = send_query(client, ids_str)
             request_count += 1
             if isinstance(tweet_data, list):
                 json_list.extend(tweet_data)
-                index += 100
+                index += batch_size
             elif tweet_data == 429:
                 print('{} requests were sent after the interval'.format(request_count))
                 print('Sleeping for 15 min')
