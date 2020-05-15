@@ -26,11 +26,14 @@ def update_article_url_db(article_dicts, publisher, db_file_path):
     session = sessionmaker(bind=engine)()
     article_list = list()
     article_url_list = list()
+    done_url_set = set()
     for article_dict in article_dicts:
         article_url = article_dict['url']
-        if session.query(Article.url).filter_by(url=article_url).scalar() is None:
+        if article_url not in done_url_set \
+                and session.query(Article.url).filter_by(url=article_url).scalar() is None:
             article_list.append(Article(**article_dict))
             article_url_list.append(article_url)
+            done_url_set.add(article_url)
     try:
         session.add_all(article_list)
         session.commit()
