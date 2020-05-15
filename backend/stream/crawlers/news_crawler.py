@@ -40,7 +40,7 @@ def get_related_article_urls(news_api_config, max_tol, timestamp, category, db_f
             article_count += len(articles)
             for article in articles:
                 article_dict_list.append({'url': article['url'], 'title': article['title'],
-                                          'publishedAt': article.get('publishedAt', ''), 'addedAt': timestamp})
+                                          'publishedAt': article.get('publishedAt', '')})
         except Exception:
             failure_count += 1
             if failure_count > max_tol:
