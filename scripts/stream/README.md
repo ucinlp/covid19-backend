@@ -1,4 +1,4 @@
-# Adhoc code
+# Adhoc scripts
 
 ## covid19_dataset_downloader.py
 
