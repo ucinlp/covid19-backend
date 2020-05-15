@@ -1,14 +1,15 @@
 """
 Insert the misinformation JSONL to a Google Sheet
 """
+import argparse
+from pathlib import Path
 import pickle
-import os.path
-
-from ..ml.misconception import MisconceptionDataset
 
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
+
+from backend.ml.misconception import MisconceptionDataset
 
 
 class MisconceptionDatasetToGSheets:
@@ -29,7 +30,7 @@ class MisconceptionDatasetToGSheets:
         # The file token.pickle stores the user's access and refresh tokens, and is
         # created automatically when the authorization flow completes for the first
         # time.
-        if os.path.exists('token.pickle'):
+        if Path('token.pickle'):
             with open('token.pickle', 'rb') as token:
                 self.creds = pickle.load(token)
         # If there are no (valid) credentials available, let the user log in.
@@ -103,11 +104,14 @@ class MisconceptionDatasetToGSheets:
 
 
 if __name__ == '__main__':
-    dataset_file = 'misconceptions.jsonl'  # 'tests/fixtures/misconceptions.jsonl'
-    range_name = 'Wikipedia!A1'  # 'Class Data!A2:E'
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--dataset_file', type=Path, default=Path('misconceptions.jsonl'))
+    parser.add_argument('-r', '--range_name', type=str, default='Wikipedia!A1')
+    args = parser.parse_args()
 
-    with open(dataset_file, 'r') as f:
+    with open(args.dataset_file, 'r') as f:
         misconceptions = MisconceptionDataset.from_jsonl(f)
+
     obj = MisconceptionDatasetToGSheets()
     obj.start_service()
-    obj.write_dataset(misconceptions, range_name)
+    obj.write_dataset(misconceptions, args.range_name)
