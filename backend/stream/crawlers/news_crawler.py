@@ -60,7 +60,8 @@ def download_article_bodies(article_urls, diffbot_config):
         try:
             article_with_body = diffbot_client.fetch(article_url, **params_config)
             # As of Apr 17, 2020, "At the moment, only a single object will be returned for Article API requests."
-            article_body_list.append(article_with_body)
+            if 'errorCode' not in article_with_body:
+                article_body_list.append(article_with_body)
         except Exception:
             print('Diffbot error: {}'.format(sys.exc_info()[0]))
     return article_body_list
