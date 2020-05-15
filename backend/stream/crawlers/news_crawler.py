@@ -35,6 +35,9 @@ def get_related_article_urls(news_api_config, max_tol, timestamp, category, db_f
     while num_hits == -1 or article_count < num_hits:
         try:
             result = news_api_client.fetch(endpoint, page=page_count, **params_config)
+            if result['status'] == 'error' and result['code'] == 'maximumResultsReached':
+                break
+
             num_hits = result['totalResults']
             articles = result['articles']
             article_count += len(articles)
