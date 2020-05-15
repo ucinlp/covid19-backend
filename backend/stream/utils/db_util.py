@@ -7,8 +7,12 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
 
-def update_article_url_db(article_dicts, publisher, db_file_path):
+def get_engine(db_file_path, echo=False):
     Path(db_file_path).parent.mkdir(parents=True, exist_ok=True)
+    return create_engine('sqlite:///{}'.format(db_file_path), echo=echo)
+
+
+def update_article_url_db(article_dicts, publisher, engine):
     base_cls = declarative_base()
 
     class Article(base_cls):
@@ -19,8 +23,8 @@ def update_article_url_db(article_dicts, publisher, db_file_path):
         publishedAt = Column(String, nullable=False)
         addedAt = Column(DateTime, nullable=False, default=datetime.utcnow)
 
-    engine = create_engine('sqlite:///{}'.format(db_file_path), echo=False)
-    base_cls.metadata.create_all(bind=engine)
+    if not engine.has_table(publisher):
+        base_cls.metadata.create_all(bind=engine)
 
     # Add articles to the table
     session = sessionmaker(bind=engine)()
@@ -44,8 +48,7 @@ def update_article_url_db(article_dicts, publisher, db_file_path):
     return article_url_list
 
 
-def update_misinfo_db(entities, model_id, db_file_path):
-    Path(db_file_path).parent.mkdir(parents=True, exist_ok=True)
+def update_misinfo_db(entities, model_id, engine):
     base_cls = declarative_base()
 
     class Misinfo(base_cls):
@@ -56,8 +59,8 @@ def update_misinfo_db(entities, model_id, db_file_path):
         date = Column(DateTime, default=datetime.utcnow)
         misc = Column(JSON)
 
-    engine = create_engine('sqlite:///{}'.format(db_file_path), echo=False)
-    base_cls.metadata.create_all(bind=engine)
+    if not engine.has_table(model_id):
+        base_cls.metadata.create_all(bind=engine)
 
     # Add misinformation to the table
     session = sessionmaker(bind=engine)()

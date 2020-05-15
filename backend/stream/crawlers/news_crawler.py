@@ -9,7 +9,7 @@ import yaml
 
 from backend.stream.apis.diffbot import DiffbotArticleClient
 from backend.stream.apis.news_api import NewsApiClient
-from backend.stream.utils.db_util import update_article_url_db
+from backend.stream.utils.db_util import get_engine, update_article_url_db
 from backend.stream.utils.misc_util import overwrite_config
 
 
@@ -23,7 +23,7 @@ def get_argparser():
     return parser
 
 
-def get_related_article_urls(news_api_config, max_tol, timestamp, category, db_file_path):
+def get_related_article_urls(news_api_config, max_tol, category, db_file_path):
     article_dict_list = list()
     news_api_client = NewsApiClient()
     endpoint = news_api_config['endpoint']
@@ -51,7 +51,8 @@ def get_related_article_urls(news_api_config, max_tol, timestamp, category, db_f
             news_api_client = NewsApiClient()
         page_count += 1
 
-    article_urls = update_article_url_db(article_dict_list, category, db_file_path)
+    engine = get_engine(db_file_path, echo=False)
+    article_urls = update_article_url_db(article_dict_list, category, engine)
     return article_urls
 
 
@@ -87,8 +88,7 @@ def main(args):
 
     category = config['category']
     timestamp = datetime.utcnow().strftime('utc-%Y%m%d-%H%M%S')
-    article_urls = get_related_article_urls(config['news_api'], args.tol, timestamp,
-                                            category, os.path.abspath(args.db))
+    article_urls = get_related_article_urls(config['news_api'], args.tol, category, os.path.abspath(args.db))
     articles = download_article_bodies(article_urls, config['diffbot'])
     write_jsonl_file(articles, os.path.join(args.output, category, timestamp + '.jsonl'))
 
