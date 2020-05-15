@@ -53,7 +53,7 @@ def update_misinfo_db(entities, model_id, db_file_path):
         date = Column(DateTime, default=datetime.utcnow)
         misc = Column(JSON)
 
-    engine = create_engine('sqlite:///{}'.format(db_file_path), echo=True)
+    engine = create_engine('sqlite:///{}'.format(db_file_path), echo=False)
     base_cls.metadata.create_all(bind=engine)
 
     # Add misinformation to the table
