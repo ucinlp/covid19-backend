@@ -18,8 +18,8 @@ class FileUtilTest(TestCase):
 class MiscUtilTest(TestCase):
     def test_overwrite_dict(self):
         org_dict = {'test': 'yay', 10: ['hello', 'world']}
-        sub_dict = {'test': 'wow', 10: ['hello', 'world'], '10': ['should not overwrite']}
-        expected_dict = {'test': 'wow', '10': ['should not overwrite']}
+        sub_dict = {'test': 'wow', '10': ['should not overwrite']}
+        expected_dict = {'test': 'wow', 10: ['hello', 'world'], '10': ['should not overwrite']}
         misc_util.overwrite_dict(org_dict, sub_dict)
         assert org_dict == expected_dict
 
