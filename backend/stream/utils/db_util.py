@@ -19,7 +19,7 @@ def update_article_url_db(article_dicts, publisher, db_file_path):
         publishedAt = Column(String, nullable=False)
         addedAt = Column(DateTime, nullable=False, default=datetime.utcnow)
 
-    engine = create_engine('sqlite:///{}'.format(db_file_path), echo=True)
+    engine = create_engine('sqlite:///{}'.format(db_file_path), echo=False)
     base_cls.metadata.create_all(bind=engine)
 
     # Add articles to the table
