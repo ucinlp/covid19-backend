@@ -3,13 +3,13 @@ import json
 import os
 import sys
 from datetime import datetime
+from pathlib import Path
 
 import yaml
 
 from backend.stream.apis.diffbot import DiffbotArticleClient
 from backend.stream.apis.news_api import NewsApiClient
 from backend.stream.utils.db_util import update_article_url_db
-from backend.stream.utils.file_util import make_parent_dirs
 from backend.stream.utils.misc_util import overwrite_config
 
 
@@ -67,7 +67,7 @@ def download_article_bodies(article_urls, diffbot_config):
 
 
 def write_jsonl_file(articles, output_file_path):
-    make_parent_dirs(output_file_path)
+    Path(output_file_path).parent.mkdir(parents=True, exist_ok=True)
     with open(output_file_path, 'w') as fp:
         for article in articles:
             fp.write('{}\n'.format(json.dumps(article)))

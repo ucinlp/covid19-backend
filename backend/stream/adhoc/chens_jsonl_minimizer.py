@@ -1,7 +1,6 @@
 import argparse
 import json
-
-from backend.stream.utils.file_util import make_parent_dirs
+from pathlib import Path
 
 REF_DICT = {
     'id': None, 'text': None, 'favorite_count': None, 'retweet_count': None, 'lang': None,
@@ -26,7 +25,7 @@ def build_sub_dict(main_dict, ref_dict):
 
 def write_jsonl_file(json_objs, output_file_path, first=True):
     mode = 'w' if first else 'a+'
-    make_parent_dirs(output_file_path)
+    Path(output_file_path).parent.mkdir(parents=True, exist_ok=True)
     with open(output_file_path, mode) as fp:
         for json_obj in json_objs:
             fp.write('{}\n'.format(json.dumps(json_obj)))

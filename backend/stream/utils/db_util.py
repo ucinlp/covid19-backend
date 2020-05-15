@@ -1,22 +1,23 @@
-from sqlalchemy import create_engine, Column, Float, JSON, String
+from datetime import datetime
+from pathlib import Path
+
+from sqlalchemy import create_engine, Column, DateTime, Float, JSON, String
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-from backend.stream.utils import file_util
-
 
 def update_article_url_db(article_dicts, publisher, db_file_path):
-    file_util.make_parent_dirs(db_file_path)
+    Path(db_file_path).parent.mkdir(parents=True, exist_ok=True)
     base_cls = declarative_base()
 
     class Article(base_cls):
         __tablename__ = publisher
 
         url = Column(String, primary_key=True)
-        title = Column(String)
-        publishedAt = Column(String)
-        addedAt = Column(String)
+        title = Column(String, nullable=False)
+        publishedAt = Column(String, nullable=False)
+        addedAt = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     engine = create_engine('sqlite:///{}'.format(db_file_path), echo=True)
     base_cls.metadata.create_all(bind=engine)
@@ -41,7 +42,7 @@ def update_article_url_db(article_dicts, publisher, db_file_path):
 
 
 def update_misinfo_db(entities, model_id, db_file_path):
-    file_util.make_parent_dirs(db_file_path)
+    Path(db_file_path).parent.mkdir(parents=True, exist_ok=True)
     base_cls = declarative_base()
 
     class Misinfo(base_cls):
@@ -49,7 +50,7 @@ def update_misinfo_db(entities, model_id, db_file_path):
 
         id = Column(String, primary_key=True)
         confidence = Column(Float)
-        detectedAt = Column(String)
+        date = Column(DateTime, default=datetime.utcnow)
         misc = Column(JSON)
 
     engine = create_engine('sqlite:///{}'.format(db_file_path), echo=True)

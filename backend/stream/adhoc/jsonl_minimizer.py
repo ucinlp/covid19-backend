@@ -1,10 +1,11 @@
 import argparse
 import json
 import os
+from pathlib import Path
 
 import yaml
 
-from backend.stream.utils.file_util import get_dir_paths, get_file_paths, make_parent_dirs
+from backend.stream.utils.file_util import get_dir_paths, get_file_paths
 
 
 def get_argparser():
@@ -29,7 +30,7 @@ def build_sub_dict(main_dict, ref_dict):
 
 def write_jsonl_file(json_objs, output_file_path, first=True):
     mode = 'w' if first else 'a+'
-    make_parent_dirs(output_file_path)
+    Path(output_file_path).parent.mkdir(parents=True, exist_ok=True)
     with open(output_file_path, mode) as fp:
         for json_obj in json_objs:
             fp.write('{}\n'.format(json.dumps(json_obj)))
