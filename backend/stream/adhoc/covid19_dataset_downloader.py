@@ -3,6 +3,7 @@ import json
 import os
 import sys
 import time
+from pathlib import Path
 
 from requests.exceptions import Timeout
 from requests_oauthlib import OAuth1Session
@@ -17,8 +18,8 @@ ACCESS_TOKEN_SECRET = os.environ.get('TWITTER_ACCESS_TOKEN_SECRET', None)
 
 def get_argparser():
     parser = argparse.ArgumentParser(description='COVID-19 Tweet dataset downloader')
-    parser.add_argument('--input', required=True, help='input root dir path')
-    parser.add_argument('--output', required=True, help='output root dir path')
+    parser.add_argument('--input', required=True, type=lambda p: Path(p), help='input root dir path')
+    parser.add_argument('--output', required=True, type=lambda p: Path(p), help='output root dir path')
     return parser
 
 

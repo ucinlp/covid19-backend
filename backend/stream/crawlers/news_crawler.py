@@ -15,11 +15,11 @@ from backend.stream.utils.misc_util import overwrite_config
 
 def get_argparser():
     parser = argparse.ArgumentParser(description='News crawler')
-    parser.add_argument('--config', required=True, help='config file path')
+    parser.add_argument('--config', required=True, type=lambda p: Path(p), help='config file path')
     parser.add_argument('--json', help='dictionary to overwrite config')
     parser.add_argument('--tol', type=int, default=0, help='maximum number of News API errors you can tolerate')
-    parser.add_argument('--db', required=True, help='output DB file path')
-    parser.add_argument('--output', required=True, help='output root dir path')
+    parser.add_argument('--db', required=True, type=lambda p: Path(p), help='output DB file path')
+    parser.add_argument('--output', required=True, type=lambda p: Path(p), help='output root dir path')
     return parser
 
 

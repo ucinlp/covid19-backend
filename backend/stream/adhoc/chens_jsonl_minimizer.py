@@ -10,8 +10,8 @@ REF_DICT = {
 
 def get_argparser():
     parser = argparse.ArgumentParser(description='Jsonl minimizer for Chen\'s Tweet dataset')
-    parser.add_argument('--input', required=True, help='input file path')
-    parser.add_argument('--output', required=True, help='output file path')
+    parser.add_argument('--input', required=True, type=lambda p: Path(p), help='input file path')
+    parser.add_argument('--output', required=True, type=lambda p: Path(p), help='output file path')
     return parser
 
 

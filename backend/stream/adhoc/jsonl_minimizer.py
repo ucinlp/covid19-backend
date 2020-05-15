@@ -10,11 +10,11 @@ from backend.stream.utils.file_util import get_dir_paths, get_file_paths
 
 def get_argparser():
     parser = argparse.ArgumentParser(description='Jsonl minimizer')
-    parser.add_argument('--input', required=True, help='input dir/file path')
-    parser.add_argument('--config', required=True, help='config file path')
+    parser.add_argument('--input', required=True, type=lambda p: Path(p), help='input dir/file path')
+    parser.add_argument('--config', required=True, type=lambda p: Path(p), help='config file path')
     parser.add_argument('--lang', required=False, help='target language')
     parser.add_argument('-exclude_rt', action='store_true', help='exclude retweets')
-    parser.add_argument('--output', required=True, help='output dir/file path')
+    parser.add_argument('--output', required=True, type=lambda p: Path(p), help='output dir/file path')
     return parser
 
 
