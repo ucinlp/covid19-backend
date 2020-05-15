@@ -23,9 +23,8 @@ def get_argparser():
     return parser
 
 
-def get_related_article_urls(news_api_config, max_tol, category, db_file_path):
+def get_related_article_urls(news_api_client, news_api_config, max_tol, category, db_file_path):
     article_dict_list = list()
-    news_api_client = NewsApiClient()
     endpoint = news_api_config['endpoint']
     params_config = news_api_config['params']
     num_hits = -1
@@ -56,9 +55,8 @@ def get_related_article_urls(news_api_config, max_tol, category, db_file_path):
     return article_urls
 
 
-def download_article_bodies(article_urls, diffbot_config):
+def download_article_bodies(diffbot_client, article_urls, diffbot_config):
     article_body_list = list()
-    diffbot_client = DiffbotArticleClient()
     params_config = diffbot_config['params']
     for article_url in article_urls:
         try:
@@ -88,8 +86,11 @@ def main(args):
 
     category = config['category']
     timestamp = datetime.utcnow().strftime('utc-%Y%m%d-%H%M%S')
-    article_urls = get_related_article_urls(config['news_api'], args.tol, category, os.path.abspath(args.db))
-    articles = download_article_bodies(article_urls, config['diffbot'])
+    news_api_client = NewsApiClient()
+    article_urls = get_related_article_urls(news_api_client, config['news_api'],
+                                            args.tol, category, os.path.abspath(args.db))
+    diffbot_client = DiffbotArticleClient()
+    articles = download_article_bodies(diffbot_client, article_urls, config['diffbot'])
     write_jsonl_file(articles, os.path.join(args.output, category, timestamp + '.jsonl'))
 
 
