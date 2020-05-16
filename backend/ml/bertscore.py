@@ -102,7 +102,7 @@ def bertscore(candidate: MaskedEmbeddings,
     return output_dict
 
 
-class BertScoreDetector(Detector):
+class BertScoreDetector(Detector, torch.nn.Module):
     """
     BERTScore Detector
 
@@ -115,7 +115,8 @@ class BertScoreDetector(Detector):
     def __init__(self,
                  model_name: str,
                  score_type: str = 'f1') -> None:
-        super().__init__()
+        Detector.__init__(self)
+        torch.nn.Module.__init__(self)
         if score_type not in ('precision', 'recall', 'f1'):
             raise ValueError(f'Invalid score type "{score_type}."')
         self._model_name = model_name
@@ -125,12 +126,14 @@ class BertScoreDetector(Detector):
 
     @overrides
     def _encode(self, sentences: List[str]) -> MaskedEmbeddings:
+        device = next(self.parameters()).device
         model_input = self._tokenizer.batch_encode_plus(
             sentences,
             pad_to_max_length=True,
             return_attention_mask=True,
             return_tensors='pt'
         )
+        model_input = {k: v.to(device) for k, v in model_input.items()}
         mask = model_input['attention_mask']
         embeddings, *_ = self._model(**model_input)
         return MaskedEmbeddings(embeddings, mask)
