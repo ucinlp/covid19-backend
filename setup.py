@@ -23,6 +23,7 @@ setup(
         'gunicorn>=20.0.4',
         'overrides>=2.8.0',
         'transformers[torch]>=2.7.0',
+        'sqlalchemy>=1.3.16'
     ],
     extras_require={
         'test': ['flake8', 'pytest']
