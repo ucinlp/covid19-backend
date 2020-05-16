@@ -33,7 +33,7 @@ def cosine_similarity(x: torch.FloatTensor,
     return scores
 
 
-class SentenceBertDetector(Detector, torch.nn.Module):
+class SentenceBertBase(Detector, torch.nn.Module):
     def __init__(self, model_name: str) -> None:
         torch.nn.Module.__init__(self)
         Detector.__init__(self)
@@ -41,6 +41,9 @@ class SentenceBertDetector(Detector, torch.nn.Module):
         self._tokenizer = AutoTokenizer.from_pretrained(model_name)
         self._model = AutoModel.from_pretrained(model_name)
 
+    # TODO: Probably want to move this to its own class. In the bigger picture, do we want a
+    # seperate classifier vs. metric learning object (similar to task-specific transformers)?
+    # Should they just be head modules?
     @overrides
     def forward(self,
                 anchor_sentences: List[str],
@@ -100,3 +103,42 @@ class SentenceBertDetector(Detector, torch.nn.Module):
         with torch.no_grad():
             score = cosine_similarity(encoded_sentences, encoded_misconceptions)
         return score.cpu().numpy()
+
+
+class SentenceBertClassifier(Detector, torch.nn.Module):
+    def __init__(self, model_name: str, num_classes: int) -> None:
+        torch.nn.Module.__init__(self)
+        Detector.__init__(self)
+        self._model_name = model_name
+        self._num_classes = num_classes
+        self._tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self._model = AutoModel.from_pretrained(model_name)
+        self._linear = torch.nn.Linear(
+            in_features=3*self._model.config.hidden_size,
+            out_features=num_classes,
+        )
+
+    @overrides
+    def _encode(self, sentences: List[str]) -> torch.FloatTensor:
+        device = next(self.parameters()).device
+        model_input = self._tokenizer.batch_encode_plus(
+            sentences,
+            pad_to_max_length=True,
+            return_attention_mask=True,
+            return_tensors='pt'
+        )
+        model_input = {k: v.to(device) for k, v in model_input.items()}
+        mask = model_input['attention_mask']
+        embeddings, *_ = self._model(**model_input)
+        masked_embeddings = embeddings * mask.unsqueeze(-1)
+        pooled_embeddings = masked_embeddings.mean(1)  # average over sequence dim
+        return pooled_embeddings
+
+    @overrides
+    def forward(self, sentences_a: List[str], sentences_b: List[str]):
+        u = self._encode(sentences_a)
+        v = self._encode(sentences_b)
+        abs_diff = (u - v).abs()
+        feature = torch.cat((u, v, abs_diff), dim=-1)
+        logits = self._linear(feature)
+        return logits
