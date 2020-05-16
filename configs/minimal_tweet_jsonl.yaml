@@ -1,0 +1,14 @@
+created_at: True
+id: True
+full_text: True
+geo: True
+coordinates: True
+retweet_count: True
+favorite_count: True
+favorited: True
+retweeted: True
+retweeted_status: True
+lang: True
+user:
+    followers_count: True
+    friends_count: True

@@ -1,0 +1,25 @@
+category: 'dailymail'
+
+news_api:
+    endpoint: 'everything'
+    params:
+        q: 'coronavirus OR covid-19 OR covid19 OR corona'
+        qInTitle:
+        sources:
+        domains: 'dailymail.co.uk'
+        excludeDomains:
+        from:
+        to:
+        language: 'en'
+        sortBy: 'publishedAt'
+        pageSize: 100
+
+diffbot:
+    params:
+        fields:
+        paging:
+        maxTags:
+        tagConfidence:
+        discussion:
+        timeout: 10000
+        callback:
