@@ -5,7 +5,7 @@ from pathlib import Path
 
 import yaml
 
-from backend.stream.utils.file_util import get_dir_paths, get_file_paths
+from backend.stream.common.file_util import get_dir_paths, get_file_paths
 
 
 def get_argparser():

@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from backend.stream.utils import file_util, misc_util
+from backend.stream.common import file_util, misc_util
 
 
 class FileUtilTest(TestCase):

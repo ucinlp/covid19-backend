@@ -8,7 +8,7 @@ from pathlib import Path
 from requests.exceptions import Timeout
 from requests_oauthlib import OAuth1Session
 
-from backend.stream.utils.file_util import get_dir_paths, get_file_paths
+from backend.stream.common.file_util import get_dir_paths, get_file_paths
 
 CONSUMER_KEY = os.environ.get('TWITTER_CONSUMER_KEY', None)
 CONSUMER_SECRET = os.environ.get('TWITTER_CONSUMER_SECRET', None)
