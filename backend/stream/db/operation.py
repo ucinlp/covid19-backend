@@ -10,7 +10,6 @@ def add_entities(entity_dicts, engine, table_class_name):
     session = sessionmaker(bind=engine)()
     entity_list = list()
     try:
-        session.commit()
         for entity_dict in entity_dicts:
             entity = table_cls(**entity_dict)
             if table_cls.check_if_exists(entity, session):
