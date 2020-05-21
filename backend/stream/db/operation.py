@@ -12,9 +12,7 @@ def add_entities(entity_dicts, engine, table_class_name, table_name=None):
         table_name = table_class_name.lower()
 
     table_cls = get_table_class(table_class_name)
-    if not engine.has_table(table_name):
-        base_cls.metadata.create_all(bind=engine)
-
+    base_cls.metadata.create_all(bind=engine)
     session = sessionmaker(bind=engine)()
     entity_list = list()
     for entity_dict in entity_dicts:
