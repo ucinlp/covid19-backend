@@ -4,8 +4,15 @@ from sqlalchemy import Column, Integer, DateTime, Float, JSON, String, ForeignKe
 from sqlalchemy.ext.declarative import declarative_base
 
 base_cls = declarative_base()
+TABLE_CLASS_DICT = dict()
 
 
+def register_table_class(cls):
+    TABLE_CLASS_DICT[cls.__name__] = cls
+    return cls
+
+
+@register_table_class
 class Label(base_cls):
     __tablename__ = 'label'
     id = Column(Integer, primary_key=True)
@@ -13,14 +20,24 @@ class Label(base_cls):
     misc = Column(JSON, nullable=True)
     date = Column(DateTime, nullable=False, default=datetime.utcnow)
 
+    @classmethod
+    def check_if_exists(cls, entity, session):
+        return session.query(cls.id).filter_by(id=entity.id).scalar()
 
+
+@register_table_class
 class Reference(base_cls):
     __tablename__ = 'reference'
     url = Column(String, primary_key=True)
     misc = Column(JSON, nullable=True)
     date = Column(DateTime, nullable=False, default=datetime.utcnow)
 
+    @classmethod
+    def check_if_exists(cls, entity, session):
+        return session.query(cls.url).filter_by(url=entity.url).scalar()
 
+
+@register_table_class
 class Model(base_cls):
     __tablename__ = 'model'
     id = Column(String, primary_key=True)
@@ -29,7 +46,23 @@ class Model(base_cls):
     desc = Column(String, nullable=True)
     date = Column(DateTime, nullable=False, default=datetime.utcnow)
 
+    @classmethod
+    def check_if_exists(cls, entity, session):
+        return session.query(cls.id).filter_by(id=entity.id).scalar()
 
+
+@register_table_class
+class Source(base_cls):
+    __tablename__ = 'source'
+    type = Column(String, primary_key=True)
+    date = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    @classmethod
+    def check_if_exists(cls, entity, session):
+        return session.query(cls.type).filter_by(type=entity.type).scalar()
+
+
+@register_table_class
 class Misinformation(base_cls):
     __tablename__ = 'misinformation'
     text = Column(String, primary_key=True)
@@ -37,13 +70,12 @@ class Misinformation(base_cls):
     label_id = Column(String, ForeignKey('label.id'), nullable=False)
     date = Column(DateTime, nullable=False, default=datetime.utcnow)
 
-
-class Source(base_cls):
-    __tablename__ = 'source'
-    type = Column(String, primary_key=True)
-    date = Column(DateTime, nullable=False, default=datetime.utcnow)
+    @classmethod
+    def check_if_exists(cls, entity, session):
+        return session.query(cls.text).filter_by(text=entity.text, model_id=entity.model_id).scalar()
 
 
+@register_table_class
 class Input(base_cls):
     __tablename__ = 'input'
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -53,7 +85,12 @@ class Input(base_cls):
     misc = Column(JSON, nullable=True)
     date = Column(DateTime, nullable=False, default=datetime.utcnow)
 
+    @classmethod
+    def check_if_exists(cls, entity, session):
+        return session.query(cls.id).filter_by(id=entity.id).scalar()
 
+
+@register_table_class
 class Output(base_cls):
     __tablename__ = 'output'
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -63,3 +100,13 @@ class Output(base_cls):
     confidence = Column(Float, nullable=False)
     misc = Column(JSON, nullable=True)
     date = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    @classmethod
+    def check_if_exists(cls, entity, session):
+        return session.query(cls.id).filter_by(id=entity.id).scalar()
+
+
+def get_table_class(cls_name):
+    if cls_name not in TABLE_CLASS_DICT:
+        raise KeyError('cls_name `{}` is not expected'.format(cls_name))
+    return TABLE_CLASS_DICT[cls_name]
