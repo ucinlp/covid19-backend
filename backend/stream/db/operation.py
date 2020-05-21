@@ -19,7 +19,7 @@ def add_entities(entity_dicts, engine, table_class_name, table_name=None):
     entity_list = list()
     for entity_dict in entity_dicts:
         entity = table_cls(**entity_dict)
-        if table_cls.check_if_exists(entity):
+        if table_cls.check_if_exists(entity, session):
             entity_list.append(entity)
     try:
         session.add_all(entity_list)
