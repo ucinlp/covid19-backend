@@ -12,7 +12,7 @@ def add_entities(entity_dicts, engine, table_class_name):
     try:
         for entity_dict in entity_dicts:
             entity = table_cls(**entity_dict)
-            if table_cls.check_if_exists(entity, session):
+            if not table_cls.check_if_exists(entity, session):
                 entity_list.append(entity)
             session.add_all(entity_list)
             session.commit()
