@@ -7,9 +7,14 @@ from backend.stream.db.operation import add_entities
 from backend.stream.db.table import Label, Reference, Model, Source, Misinformation, Input, Output
 
 
+def check_if_registered(table_cls, entity_dict_list, session):
+    expected_entities = [table_cls(**entity_dict) for entity_dict in entity_dict_list]
+    return all(table_cls.check_if_exists(entity, session) for entity in expected_entities)
+
+
 class OperationTest(TestCase):
     def test_add_labels(self):
-        engine = create_engine('sqlite:///:memory:', echo=False)
+        engine = create_engine('sqlite://', echo=False)
         entity_dict_list = [{'id': 0, 'name': 'misleading'}]
         first_entities = add_entities(entity_dict_list, engine, 'Label')
         assert len(first_entities) == len(entity_dict_list)
@@ -19,11 +24,11 @@ class OperationTest(TestCase):
         assert len(second_entities) == len(entity_dict_list) - len(first_entities)
 
         session = sessionmaker(bind=engine)()
-        assert all(Label.check_if_exists(entity, session) for entity in first_entities + second_entities)
+        assert check_if_registered(Label, entity_dict_list, session)
         session.close()
 
     def test_add_references(self):
-        engine = create_engine('sqlite:///:memory:', echo=False)
+        engine = create_engine('sqlite://', echo=False)
         entity_dict_list = [{'url': 'https://github.com'}]
         first_entities = add_entities(entity_dict_list, engine, 'Reference')
         assert len(first_entities) == len(entity_dict_list)
@@ -33,11 +38,11 @@ class OperationTest(TestCase):
         assert len(second_entities) == len(entity_dict_list) - len(first_entities)
 
         session = sessionmaker(bind=engine)()
-        assert all(Reference.check_if_exists(entity, session) for entity in first_entities + second_entities)
+        assert check_if_registered(Reference, entity_dict_list, session)
         session.close()
 
     def test_add_models(self):
-        engine = create_engine('sqlite:///:memory:', echo=False)
+        engine = create_engine('sqlite://', echo=False)
         entity_dict_list = [{'id': 'bert-test-ver', 'name': 'BERT score', 'config': {}}]
         first_entities = add_entities(entity_dict_list, engine, 'Model')
         assert len(first_entities) == len(entity_dict_list)
@@ -47,11 +52,11 @@ class OperationTest(TestCase):
         assert len(second_entities) == len(entity_dict_list) - len(first_entities)
 
         session = sessionmaker(bind=engine)()
-        assert all(Model.check_if_exists(entity, session) for entity in first_entities + second_entities)
+        assert check_if_registered(Model, entity_dict_list, session)
         session.close()
 
     def test_add_sources(self):
-        engine = create_engine('sqlite:///:memory:', echo=False)
+        engine = create_engine('sqlite://', echo=False)
         entity_dict_list = [{'type': 'Twitter'}]
         first_entities = add_entities(entity_dict_list, engine, 'Source')
         assert len(first_entities) == len(entity_dict_list)
@@ -61,11 +66,11 @@ class OperationTest(TestCase):
         assert len(second_entities) == len(entity_dict_list) - len(first_entities)
 
         session = sessionmaker(bind=engine)()
-        assert all(Source.check_if_exists(entity, session) for entity in first_entities + second_entities)
+        assert check_if_registered(Source, entity_dict_list, session)
         session.close()
 
     def test_add_misinformation(self):
-        engine = create_engine('sqlite:///:memory:', echo=False)
+        engine = create_engine('sqlite://', echo=False)
         # Register a model
         add_entities([{'id': 'bert-test-ver', 'name': 'BERT score', 'config': {}}], engine, 'Model')
         # Register a label
@@ -80,11 +85,11 @@ class OperationTest(TestCase):
         assert len(second_entities) == len(entity_dict_list) - len(first_entities)
 
         session = sessionmaker(bind=engine)()
-        assert all(Misinformation.check_if_exists(entity, session) for entity in first_entities + second_entities)
+        assert check_if_registered(Misinformation, entity_dict_list, session)
         session.close()
 
     def test_add_inputs(self):
-        engine = create_engine('sqlite:///:memory:', echo=False)
+        engine = create_engine('sqlite://', echo=False)
         # Register a source
         add_entities([{'type': 'Twitter'}], engine, 'Source')
 
@@ -92,16 +97,13 @@ class OperationTest(TestCase):
         first_entities = add_entities(entity_dict_list, engine, 'Input')
         assert len(first_entities) == len(entity_dict_list)
 
-        entity_dict_list.append({'text': 'still no idea', 'source_type': 'Twitter', 'source_id': 'some tweet ID'})
-        second_entities = add_entities(entity_dict_list, engine, 'Input')
-        assert len(second_entities) == len(entity_dict_list) - len(first_entities)
-
         session = sessionmaker(bind=engine)()
-        assert all(Input.check_if_exists(entity, session) for entity in first_entities + second_entities)
+        entity_dict_list[0]['id'] = 1
+        assert check_if_registered(Input, entity_dict_list, session)
         session.close()
 
     def test_add_outputs(self):
-        engine = create_engine('sqlite:///:memory:', echo=False)
+        engine = create_engine('sqlite://', echo=False)
         # Register a source
         add_entities([{'type': 'Twitter'}], engine, 'Source')
         # Register an input
@@ -112,14 +114,13 @@ class OperationTest(TestCase):
         # Register a label
         add_entities([{'id': 0, 'name': 'misleading'}], engine, 'Label')
 
-        entity_dict_list = [{'input_id': 1, 'model_id': 'bert-test-ver', 'prediction': 0, 'confidence': 0.5}]
+        entity_dict_list = [{'input_id': 1, 'model_id': 'bert-test-ver', 'prediction': 0, 'confidence': 0.5},
+                            {'input_id': 2, 'model_id': 'bert-test-ver', 'prediction': 0, 'confidence': 0.5}]
         first_entities = add_entities(entity_dict_list, engine, 'Output')
         assert len(first_entities) == len(entity_dict_list)
 
-        entity_dict_list.append({'input_id': 2, 'model_id': 'bert-test-ver', 'prediction': 0, 'confidence': 0.5})
-        second_entities = add_entities(entity_dict_list, engine, 'Input')
-        assert len(second_entities) == len(entity_dict_list) - len(first_entities)
-
         session = sessionmaker(bind=engine)()
-        assert all(Output.check_if_exists(entity, session) for entity in first_entities + second_entities)
+        for i, entity_dict in enumerate(entity_dict_list):
+            entity_dict['id'] = i + 1
+        assert check_if_registered(Output, entity_dict_list, session)
         session.close()
