@@ -14,8 +14,9 @@ def add_entities(entity_dicts, engine, table_class_name):
             entity = table_cls(**entity_dict)
             if not table_cls.check_if_exists(entity, session):
                 entity_list.append(entity)
-            session.add_all(entity_list)
-            session.commit()
+                
+        session.add_all(entity_list)
+        session.commit()
     except SQLAlchemyError as e:
         print(e)
     finally:
