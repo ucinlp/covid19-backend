@@ -66,7 +66,7 @@ def load_model (model_dir, weights):
     """    
 
     model = SentenceBertClassifier(model_name = model_dir , num_classes=3)
-    state_dict = torch.load(weights, map_location='cpu')
+    state_dict = torch.load(weights)
 
     # remove `module.`
     new_state_dict = OrderedDict()
