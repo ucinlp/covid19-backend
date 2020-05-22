@@ -1,5 +1,6 @@
 from unittest import TestCase
 
+from backend.stream.db.operation import select_all
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -124,3 +125,10 @@ class OperationTest(TestCase):
             entity_dict['id'] = i + 1
         assert check_if_registered(Output, entity_dict_list, session)
         session.close()
+
+    def test_select_all(self):
+        engine = create_engine('sqlite://', echo=False)
+        entity_dict_list = [{'id': 0, 'name': 'misleading'}, {'id': 1, 'name': 'no scientific evidence'}]
+        add_entities(entity_dict_list, engine, 'Label')
+        keys, values = select_all(engine, 'Label')
+        assert keys == ['id', 'name', 'misc', 'date'] and len(values) == len(entity_dict_list)
