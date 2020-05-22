@@ -22,7 +22,7 @@ class Label(base_cls):
 
     @classmethod
     def check_if_exists(cls, entity, session):
-        return session.query(cls.id).filter_by(id=entity.id).scalar()
+        return session.query(cls.id).filter_by(id=entity.id).scalar() is not None
 
 
 @register_table_class
@@ -34,7 +34,7 @@ class Reference(base_cls):
 
     @classmethod
     def check_if_exists(cls, entity, session):
-        return session.query(cls.url).filter_by(url=entity.url).scalar()
+        return session.query(cls.url).filter_by(url=entity.url).scalar() is not None
 
 
 @register_table_class
@@ -48,7 +48,7 @@ class Model(base_cls):
 
     @classmethod
     def check_if_exists(cls, entity, session):
-        return session.query(cls.id).filter_by(id=entity.id).scalar()
+        return session.query(cls.id).filter_by(id=entity.id).scalar() is not None
 
 
 @register_table_class
@@ -59,7 +59,7 @@ class Source(base_cls):
 
     @classmethod
     def check_if_exists(cls, entity, session):
-        return session.query(cls.type).filter_by(type=entity.type).scalar()
+        return session.query(cls.type).filter_by(type=entity.type).scalar() is not None
 
 
 @register_table_class
@@ -72,7 +72,7 @@ class Misinformation(base_cls):
 
     @classmethod
     def check_if_exists(cls, entity, session):
-        return session.query(cls.text).filter_by(text=entity.text, model_id=entity.model_id).scalar()
+        return session.query(cls.text).filter_by(text=entity.text, model_id=entity.model_id).scalar() is not None
 
 
 @register_table_class
@@ -87,7 +87,7 @@ class Input(base_cls):
 
     @classmethod
     def check_if_exists(cls, entity, session):
-        return session.query(cls.id).filter_by(id=entity.id).scalar()
+        return session.query(cls.id).filter_by(id=entity.id).scalar() is not None
 
 
 @register_table_class
@@ -103,7 +103,7 @@ class Output(base_cls):
 
     @classmethod
     def check_if_exists(cls, entity, session):
-        return session.query(cls.id).filter_by(id=entity.id).scalar()
+        return session.query(cls.id).filter_by(id=entity.id).scalar() is not None
 
 
 def get_table_class(cls_name):
