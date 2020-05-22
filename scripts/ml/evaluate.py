@@ -162,7 +162,7 @@ def get_metrics (model: SentenceBertClassifier, annotations: AnnotatedDataset, b
               'Precision (Macro Avg.)' :  precision_macro ,
               'Recall (Macro Avg.)' : recall_macro ,
               'Precision (Micro Avg.)' : precision_micro ,
-              'Recall (Macro Avg.)' : recall_micro }
+              'Recall (Micro Avg.)' : recall_micro }
             
     return metrics
 
