@@ -39,5 +39,6 @@ def select_all(engine, table_class_name):
     except SQLAlchemyError as e:
         print(e)
     finally:
-        session.close()
+        if connection is not None:
+            session.close()
     return keys, values
