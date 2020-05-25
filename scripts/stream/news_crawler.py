@@ -6,11 +6,15 @@ from datetime import datetime
 from pathlib import Path
 
 import yaml
+from sqlalchemy import Column, DateTime, String
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 
 from backend.stream.apis.diffbot import DiffbotArticleClient
 from backend.stream.apis.news_api import NewsApiClient
-from backend.stream.utils.db_util import get_engine, update_article_url_db
-from backend.stream.utils.misc_util import overwrite_config
+from backend.stream.common.misc_util import overwrite_config
+from backend.stream.db.util import get_engine
 
 
 def get_argparser():
@@ -21,6 +25,42 @@ def get_argparser():
     parser.add_argument('--db', required=True, type=lambda p: Path(p), help='output DB file path')
     parser.add_argument('--output', required=True, type=lambda p: Path(p), help='output root dir path')
     return parser
+
+
+def update_article_url_db(article_dicts, publisher, engine):
+    base_cls = declarative_base()
+
+    class Article(base_cls):
+        __tablename__ = publisher
+
+        url = Column(String, primary_key=True)
+        title = Column(String, nullable=False)
+        publishedAt = Column(String, nullable=False)
+        addedAt = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    if not engine.has_table(publisher):
+        base_cls.metadata.create_all(bind=engine)
+
+    # Add articles to the table
+    session = sessionmaker(bind=engine)()
+    article_list = list()
+    article_url_list = list()
+    done_url_set = set()
+    for article_dict in article_dicts:
+        article_url = article_dict['url']
+        if article_url not in done_url_set \
+                and session.query(Article.url).filter_by(url=article_url).scalar() is None:
+            article_list.append(Article(**article_dict))
+            article_url_list.append(article_url)
+            done_url_set.add(article_url)
+    try:
+        session.add_all(article_list)
+        session.commit()
+    except SQLAlchemyError as e:
+        print(e)
+    finally:
+        session.close()
+    return article_url_list
 
 
 def get_related_article_urls(news_api_client, news_api_config, max_tol, category, db_file_path):
