@@ -66,9 +66,12 @@ class Source(base_cls):
 @register_table_class
 class Misinformation(base_cls):
     __tablename__ = 'misinformation'
+    id = Column(Integer, primary_key=True, autoincrement=True)
     text = Column(String, primary_key=True)
-    model_id = Column(String, ForeignKey('model.id'), primary_key=True)
-    label_id = Column(String, ForeignKey('label.id'), nullable=False)
+    url = Column(String, nullable=True)
+    source = Column(String, nullable=False)
+    reliability = Column(Float, nullable=False)
+    misc = Column(JSON, nullable=True)
     date = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     @classmethod
@@ -97,7 +100,7 @@ class Output(base_cls):
     id = Column(Integer, primary_key=True, autoincrement=True)
     input_id = Column(Integer, ForeignKey('input.id'), nullable=False)
     model_id = Column(String, ForeignKey('model.id'), nullable=False)
-    prediction = Column(String, ForeignKey('label.id'), nullable=False)
+    label_id = Column(Integer, ForeignKey('label.id'), nullable=False)
     confidence = Column(Float, nullable=False)
     misc = Column(JSON, nullable=True)
     date = Column(DateTime, nullable=False, default=datetime.utcnow)
