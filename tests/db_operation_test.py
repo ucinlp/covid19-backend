@@ -44,11 +44,11 @@ class OperationTest(TestCase):
 
     def test_add_models(self):
         engine = create_engine('sqlite://', echo=False)
-        entity_dict_list = [{'id': 'bert-test-ver', 'name': 'BERT score', 'config': {}}]
+        entity_dict_list = [{'id': 'bert-test-ver', 'name': 'BERT score', 'human': False, 'config': {}}]
         first_entities = add_entities(entity_dict_list, engine, 'Model')
         assert len(first_entities) == len(entity_dict_list)
 
-        entity_dict_list.append({'id': 'bert-prod-ver', 'name': 'BERT score', 'config': {}})
+        entity_dict_list.append({'id': 'bert-prod-ver', 'name': 'BERT score', 'human': False, 'config': {}})
         second_entities = add_entities(entity_dict_list, engine, 'Model')
         assert len(second_entities) == len(entity_dict_list) - len(first_entities)
 
@@ -73,7 +73,7 @@ class OperationTest(TestCase):
     def test_add_misinformation(self):
         engine = create_engine('sqlite://', echo=False)
         # Register a model
-        add_entities([{'id': 'bert-test-ver', 'name': 'BERT score', 'config': {}}], engine, 'Model')
+        add_entities([{'id': 'bert-test-ver', 'name': 'BERT score', 'human': False, 'config': {}}], engine, 'Model')
         # Register a label
         add_entities([{'id': 0, 'name': 'misleading'}], engine, 'Label')
 
@@ -111,7 +111,7 @@ class OperationTest(TestCase):
         add_entities([{'text': 'no', 'source_type': 'Twitter', 'source_id': 'some tweet ID'}], engine, 'Input')
         add_entities([{'text': 'hmm', 'source_type': 'Twitter', 'source_id': 'some tweet ID'}], engine, 'Input')
         # Register a model
-        add_entities([{'id': 'bert-test-ver', 'name': 'BERT score', 'config': {}}], engine, 'Model')
+        add_entities([{'id': 'bert-test-ver', 'name': 'BERT score', 'human': False, 'config': {}}], engine, 'Model')
         # Register a label
         add_entities([{'id': 0, 'name': 'misleading'}], engine, 'Label')
 

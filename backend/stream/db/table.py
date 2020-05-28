@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Column, Integer, DateTime, Float, JSON, String, ForeignKey
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, JSON, String
 from sqlalchemy.ext.declarative import declarative_base
 
 base_cls = declarative_base()
@@ -42,6 +42,7 @@ class Model(base_cls):
     __tablename__ = 'model'
     id = Column(String, primary_key=True)
     name = Column(String, nullable=False)
+    human = Column(Boolean, nullable=False)
     config = Column(JSON, nullable=False)
     desc = Column(String, nullable=True)
     date = Column(DateTime, nullable=False, default=datetime.utcnow)
