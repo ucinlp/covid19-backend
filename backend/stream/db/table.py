@@ -67,7 +67,7 @@ class Source(base_cls):
 class Misinformation(base_cls):
     __tablename__ = 'misinformation'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    text = Column(String, primary_key=True)
+    text = Column(String, nullable=False)
     url = Column(String, nullable=True)
     source = Column(String, nullable=False)
     reliability = Column(Float, nullable=False)
@@ -76,7 +76,7 @@ class Misinformation(base_cls):
 
     @classmethod
     def check_if_exists(cls, entity, session):
-        return session.query(cls.text).filter_by(text=entity.text, model_id=entity.model_id).scalar() is not None
+        return session.query(cls.text).filter_by(text=entity.text).scalar() is not None
 
 
 @register_table_class
@@ -100,6 +100,7 @@ class Output(base_cls):
     id = Column(Integer, primary_key=True, autoincrement=True)
     input_id = Column(Integer, ForeignKey('input.id'), nullable=False)
     model_id = Column(String, ForeignKey('model.id'), nullable=False)
+    misinfo_id = Column(Integer, ForeignKey('misinformation.id'), nullable=False)
     label_id = Column(Integer, ForeignKey('label.id'), nullable=False)
     confidence = Column(Float, nullable=False)
     misc = Column(JSON, nullable=True)

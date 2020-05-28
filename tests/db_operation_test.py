@@ -78,12 +78,12 @@ class OperationTest(TestCase):
         add_entities([{'id': 0, 'name': 'misleading'}], engine, 'Label')
 
         entity_dict_list = [{'text': 'no idea', 'url': 'http://www.cdc.gov', 'source': 'CDC',
-                             'reliability': 3, 'label_id': 0}]
+                             'reliability': 3}]
         first_entities = add_entities(entity_dict_list, engine, 'Misinformation')
         assert len(first_entities) == len(entity_dict_list)
 
         entity_dict_list.append({'text': 'hmm', 'url': 'https://www.who.int/', 'source': 'WHO',
-                                 'reliability': 3, 'label_id': 0})
+                                 'reliability': 3})
         second_entities = add_entities(entity_dict_list, engine, 'Misinformation')
         assert len(second_entities) == len(entity_dict_list) - len(first_entities)
 
@@ -116,9 +116,13 @@ class OperationTest(TestCase):
         add_entities([{'id': 'bert-test-ver', 'name': 'BERT score', 'human': False, 'config': {}}], engine, 'Model')
         # Register a label
         add_entities([{'id': 0, 'name': 'misleading'}], engine, 'Label')
-
-        entity_dict_list = [{'input_id': 1, 'model_id': 'bert-test-ver', 'label_id': 0, 'confidence': 0.5},
-                            {'input_id': 2, 'model_id': 'bert-test-ver', 'label_id': 0, 'confidence': 0.5}]
+        # Register misinformation
+        add_entities([{'text': 'hmm', 'url': 'https://www.who.int/', 'source': 'WHO',
+                       'reliability': 3}], engine, 'Misinformation')
+        entity_dict_list = [{'input_id': 1, 'model_id': 'bert-test-ver', 'label_id': 0,
+                             'misinfo_id': 1, 'confidence': 0.5},
+                            {'input_id': 2, 'model_id': 'bert-test-ver', 'label_id': 0,
+                             'misinfo_id': 1, 'confidence': 0.5}]
         first_entities = add_entities(entity_dict_list, engine, 'Output')
         assert len(first_entities) == len(entity_dict_list)
 
