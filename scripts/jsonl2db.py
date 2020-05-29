@@ -17,7 +17,7 @@ def get_argparser():
 
 def modify_records(custom_type, records):
     if custom_type == 'initial_wiki':
-        for i in range(records):
+        for i in range(len(records)):
             old_record = records[i]
             record = {'id': old_record.pop('id'), 'text': old_record.pop('canonical_text'),
                       'source': old_record.pop('origin'), 'reliability': old_record.pop('reliability_score'),
