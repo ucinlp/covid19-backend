@@ -68,7 +68,7 @@ class Misinformation(base_cls):
     __tablename__ = 'misinformation'
     id = Column(Integer, primary_key=True, autoincrement=True)
     text = Column(String, nullable=False)
-    url = Column(String, nullable=True)
+    url = Column(JSON, nullable=True)
     source = Column(String, nullable=False)
     reliability = Column(Float, nullable=False)
     misc = Column(JSON, nullable=True)

@@ -6,6 +6,7 @@ from sqlalchemy.orm import sessionmaker
 
 from backend.stream.db.operation import add_entities
 from backend.stream.db.table import Label, Reference, Model, Source, Misinformation, Input, Output
+import json
 
 
 def check_if_registered(table_cls, entity_dict_list, session):
@@ -77,12 +78,12 @@ class OperationTest(TestCase):
         # Register a label
         add_entities([{'id': 0, 'name': 'misleading'}], engine, 'Label')
 
-        entity_dict_list = [{'text': 'no idea', 'url': 'http://www.cdc.gov', 'source': 'CDC',
+        entity_dict_list = [{'text': 'no idea', 'url': json.dumps({'list': ['http://www.cdc.gov']}), 'source': 'CDC',
                              'reliability': 3}]
         first_entities = add_entities(entity_dict_list, engine, 'Misinformation')
         assert len(first_entities) == len(entity_dict_list)
 
-        entity_dict_list.append({'text': 'hmm', 'url': 'https://www.who.int/', 'source': 'WHO',
+        entity_dict_list.append({'text': 'hmm', 'url': json.dumps({'list': ['http://www.who.int']}), 'source': 'WHO',
                                  'reliability': 3})
         second_entities = add_entities(entity_dict_list, engine, 'Misinformation')
         assert len(second_entities) == len(entity_dict_list) - len(first_entities)
@@ -117,7 +118,7 @@ class OperationTest(TestCase):
         # Register a label
         add_entities([{'id': 0, 'name': 'misleading'}], engine, 'Label')
         # Register misinformation
-        add_entities([{'text': 'hmm', 'url': 'https://www.who.int/', 'source': 'WHO',
+        add_entities([{'text': 'hmm', 'url': json.dumps({'list': ['http://www.who.int']}), 'source': 'WHO',
                        'reliability': 3}], engine, 'Misinformation')
         entity_dict_list = [{'input_id': 1, 'model_id': 'bert-test-ver', 'label_id': 0,
                              'misinfo_id': 1, 'confidence': 0.5},
