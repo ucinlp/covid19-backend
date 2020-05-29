@@ -5,6 +5,7 @@ import argparse
 from pathlib import Path
 import os
 import pandas as pd
+import numpy as np
 from collections import OrderedDict
 
 from backend.ml.misconception import MisconceptionDataset
@@ -15,11 +16,12 @@ class AnnotatedDataset(Dataset):
     def __init__(self, fname):
         self._fname = fname
 
-        posts, misinfos, labels = self._read(fname)
+        posts, misinfos, ids, labels = self._read(fname)
 
         self._posts = posts
         self._misinfos = misinfos
         self._labels = labels
+        self._ids = ids
 
     def _read(self, fname):
 
@@ -32,14 +34,16 @@ class AnnotatedDataset(Dataset):
         # Filter
         mask = (annotations['tweet'].str.len() < 500) & (annotations['misconception'].str.len() < 500) & (annotations['label'].isin(label_to_idx))
         annotations = annotations.loc[mask]
+        annotations = annotations.head(6)
 
         # To List
         posts = annotations['tweet'].to_list()
-        misinfos = annotations['misconception'].to_list()        
+        misinfos = annotations['misconception'].to_list()   
+        ids = annotations['misconception_id'].to_list()  
         labels = annotations['label'].to_list()
         labels = [label_to_idx[l] for l in labels]
 
-        return posts, misinfos, labels
+        return posts, misinfos, ids, labels
 
     def __len__(self):
         return len(self._labels)
@@ -48,7 +52,8 @@ class AnnotatedDataset(Dataset):
         post = self._posts[idx]
         misinfo = self._misinfos[idx]
         label = self._labels[idx]
-        return post, misinfo, label
+        id = self._ids[idx]
+        return post, misinfo, id, label 
 
 
 def load_model (model_dir, weights):
@@ -91,15 +96,11 @@ def precision_recall(confusion_matrix: torch.Tensor):
     confusion_matrix: torch.Tensor
         Confusion Matrix 
     # Returns
-    precision_macro: Float 
-        Macro Averaged Precision
-    recall_macro: Float 
-        Macro Averaged Recall
-    precision_micro: Float
-        Micro Averaged Precision
-    recall_micro: Float
-        Micro Averaged Recall
-            
+    class_precisions: Float 
+       Precision for each class
+    class_recalls: Float 
+       Recall for each class
+
     """
     
     preds_pos = torch.sum(confusion_matrix, dim=0) #tp+fp
@@ -108,16 +109,16 @@ def precision_recall(confusion_matrix: torch.Tensor):
         
     class_precisions =  true_pos/preds_pos   
     class_recalls = true_pos/labels_pos
-    
-    precision_macro = class_precisions.sum()/len(class_precisions)
-    recall_macro = class_recalls.sum()/len(class_recalls)
-    
-    precision_micro = true_pos.sum()/preds_pos.sum()
-    recall_micro = true_pos.sum()/labels_pos.sum()
-    
-    return precision_macro.item(), recall_macro.item(), precision_micro.item(), recall_micro.item()
+      
+    return class_precisions.tolist(), class_recalls.tolist()
 
-def get_metrics (model: SentenceBertClassifier, annotations: AnnotatedDataset, batch_size : int, num_classes=3):
+def hits_k(df,k):
+    hits = df[df.ranks <= k].shape[0]
+    total = df.shape[0]
+    
+    return hits/total
+    
+def cm_metrics (model: SentenceBertClassifier, annotations: AnnotatedDataset, batch_size : int, num_classes=3):
     
     """
     Returns Dictionary of Evaluation Metrics 
@@ -132,10 +133,13 @@ def get_metrics (model: SentenceBertClassifier, annotations: AnnotatedDataset, b
     num_classes : int
         Number of classes in classifier (deault = 3)
         
-    # Returns
-    metrics : Dict
-        Dictionary of the following evaluation metrics - 
-        Accuracy,  Precision (Macro Averaged), Recall (Macro Averaged), Precision (Micro Averaged), Recall (Micro Averaged)
+    # Printss
+    acc:
+        Accuracy    
+    class_precisions: Float 
+       Precision for each class
+    class_recalls: Float 
+       Recall for each class
             
     """
 
@@ -147,7 +151,7 @@ def get_metrics (model: SentenceBertClassifier, annotations: AnnotatedDataset, b
     
     confusion_matrix = torch.zeros(num_classes, num_classes)
        
-    for posts, misinfos, labels in iterable:
+    for posts, misinfos, id, labels in iterable:
         with torch.no_grad():
             logits = model(posts, misinfos)
             _, preds = logits.max(dim=-1) 
@@ -156,15 +160,64 @@ def get_metrics (model: SentenceBertClassifier, annotations: AnnotatedDataset, b
                 confusion_matrix[y, y_pred] += 1
 
     acc = accuracy(confusion_matrix)
-    precision_macro, recall_macro, precision_micro, recall_micro = precision_recall(confusion_matrix)  
+    class_precisions, class_recalls = precision_recall(confusion_matrix)  
    
-    metrics = {'Accuracy' : acc,
-              'Precision (Macro Avg.)' :  precision_macro ,
-              'Recall (Macro Avg.)' : recall_macro ,
-              'Precision (Micro Avg.)' : precision_micro ,
-              'Recall (Micro Avg.)' : recall_micro }
+    print ('Accuracy : ', acc)
+    print ('Class Precisions : ', class_precisions)    
+    print ('Class Recalls : ', class_recalls)
+
+def rank_metrics (model: SentenceBertClassifier, annotations: AnnotatedDataset, misconceptions: MisconceptionDataset, k):
+    
+    """
+    Returns Dictionary of Evaluation Metrics 
+    
+    # Parameters
+    model: SentenceBertClassifier
+        NLI classifier
+    annotations:  AnnotatedDataset
+        Test dataset with tweets, misconceptions, and corresponding labels (pos/neg/na)
+    misconceptions : MisconceptionDataset
+    k : int
+        Value of K for Hits@k
+        
+    # Prints
+        Hits@k and MRR for Positive and Negative classes
             
-    return metrics
+    """
+    ### Hits at K at MRR    
+    ranks = []
+    labels = []
+    for post, misinfo, id, label in tqdm(annotations):
+        scores=[]
+        ids = []        
+        if ( label == 0 or label == 1) : #Only for Positive or Negative Labels            
+            for miscon in misconceptions:           
+                with torch.no_grad():
+                    logits = model([post], [miscon.pos_variations[0]])
+                    logit = logits[0][label]
+                    
+                    ids.append( int( miscon.id ) )
+                    scores.append(logit.item())    
+             
+            zipped = list(zip(ids, scores))
+            sort = sorted(zipped, key=lambda x: x[1], reverse = True)
+                
+            rank = [y[0] for y in sort].index(id) + 1
+            ranks.append (rank)
+            labels.append (label)
+            
+    rank_df = pd.DataFrame ({'labels' : labels , 
+                             'ranks' : ranks,
+                             'inv_ranks' : [1/r for r in ranks] })
+    
+    for i in range(2):
+        print ('--- CLASS = ', i, '---')
+        df = rank_df[rank_df['labels'] == i]
+        hk = hits_k (df, k)
+        mrr = np.mean(df.inv_ranks)
+        print ('Hits at K = ', k, ' : ', hk)
+        print ('MRR : ', mrr)
+     
 
 def main():
     
@@ -173,6 +226,7 @@ def main():
     parser.add_argument('--weights',type=Path, required=True)    
     parser.add_argument('--test', type=Path, required=True)
     parser.add_argument('--misinfo', type=Path, required=True)
+    parser.add_argument('--k', type=int, default=3)
     parser.add_argument('--batch-size', type=int, default=10)
     args = parser.parse_args()
     
@@ -183,8 +237,8 @@ def main():
     model = load_model(args.model_dir, args.weights)
     model.eval()
     
-    metrics = get_metrics (model, annotations, args.batch_size)
-    print (metrics)
+    cm_metrics (model, annotations, args.batch_size)    
+    rank_metrics (model, annotations, misconceptions, args.k)
 
 if __name__ == '__main__':
     main()
