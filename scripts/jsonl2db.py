@@ -16,7 +16,7 @@ def get_argparser():
 
 
 def modify_records(custom_type, records):
-    if custom_type == 'initial_wiki_ver':
+    if custom_type == 'initial_wiki':
         for i in range(records):
             old_record = records[i]
             record = {'id': old_record.pop('id'), 'text': old_record.pop('canonical_text'),
@@ -34,7 +34,7 @@ def main(args):
     with open(args.input, 'r') as fp:
         records = [json.loads(line) for line in fp]
 
-    if args.custon is not None:
+    if args.custom is not None:
         modify_records(args.custom, records)
     add_records(records, args.table, args.db)
 
