@@ -34,7 +34,6 @@ class AnnotatedDataset(Dataset):
         # Filter
         mask = (annotations['tweet'].str.len() < 500) & (annotations['misconception'].str.len() < 500) & (annotations['label'].isin(label_to_idx))
         annotations = annotations.loc[mask]
-        annotations = annotations.head(6)
 
         # To List
         posts = annotations['tweet'].to_list()
