@@ -2,7 +2,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import select
 
-from backend.stream.db.table import get_table_class
+from backend.stream.db.table import get_table_class, Input, Output
 
 
 def add_entities(entity_dicts, engine, table_class_name):
@@ -29,16 +29,31 @@ def select_all(engine, table_class_name):
     table_cls = get_table_class(table_class_name)
     table_cls.metadata.create_all(bind=engine, checkfirst=True)
     session = sessionmaker(bind=engine)()
-    keys, values, connection = None, None, None
+    results, connection = None, None
     try:
         connection = engine.connect()
         results = connection.execute(select([table_cls]))
-        keys = results.keys()
-        values = [row.values() for row in results]
         connection.close()
     except SQLAlchemyError as e:
         print(e)
     finally:
         if connection is not None:
             session.close()
-    return keys, values
+    return results
+
+
+def select_all_input_output_pairs(engine):
+    Input.metadata.create_all(bind=engine, checkfirst=True)
+    Output.metadata.create_all(bind=engine, checkfirst=True)
+    session = sessionmaker(bind=engine)()
+    results, connection = None, None
+    try:
+        connection = engine.connect()
+        results = session.query(Input, Output).filter(Input.id == Output.input_id).all()
+        connection.close()
+    except SQLAlchemyError as e:
+        print(e)
+    finally:
+        if connection is not None:
+            session.close()
+    return results

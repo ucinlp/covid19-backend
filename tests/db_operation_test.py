@@ -1,12 +1,11 @@
+import json
 from unittest import TestCase
 
-from backend.stream.db.operation import select_all
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from backend.stream.db.operation import add_entities
+from backend.stream.db.operation import add_entities, select_all, select_all_input_output_pairs
 from backend.stream.db.table import Label, Reference, Model, Source, Misinformation, Input, Output
-import json
 
 
 def check_if_registered(table_cls, entity_dict_list, session):
@@ -137,5 +136,30 @@ class OperationTest(TestCase):
         engine = create_engine('sqlite://', echo=False)
         entity_dict_list = [{'id': 0, 'name': 'misleading'}, {'id': 1, 'name': 'no scientific evidence'}]
         add_entities(entity_dict_list, engine, 'Label')
-        keys, values = select_all(engine, 'Label')
+        results = select_all(engine, 'Label')
+        keys = results.keys()
+        values = [row.values() for row in results]
         assert keys == ['id', 'name', 'misc', 'date'] and len(values) == len(entity_dict_list)
+
+    def test_select_all_input_output_pairs(self):
+        engine = create_engine('sqlite://', echo=False)
+        # Register a source
+        add_entities([{'type': 'Twitter'}], engine, 'Source')
+        # Register an input
+        add_entities([{'text': 'no', 'source_type': 'Twitter', 'source_id': 'some tweet ID'}], engine, 'Input')
+        add_entities([{'text': 'hmm', 'source_type': 'Twitter', 'source_id': 'some tweet ID'}], engine, 'Input')
+        add_entities([{'text': 'ok', 'source_type': 'Twitter', 'source_id': 'some tweet ID'}], engine, 'Input')
+        # Register a model
+        add_entities([{'id': 'bert-test-ver', 'name': 'BERT score', 'human': False, 'config': {}}], engine, 'Model')
+        # Register a label
+        add_entities([{'id': 0, 'name': 'misleading'}], engine, 'Label')
+        # Register misinformation
+        add_entities([{'text': 'hmm', 'url': json.dumps({'list': ['http://www.who.int']}), 'source': 'WHO',
+                       'reliability': 3}], engine, 'Misinformation')
+        entity_dict_list = [{'input_id': 1, 'model_id': 'bert-test-ver', 'label_id': 0,
+                             'misinfo_id': 1, 'confidence': 0.5},
+                            {'input_id': 2, 'model_id': 'bert-test-ver', 'label_id': 0,
+                             'misinfo_id': 1, 'confidence': 0.5}]
+        add_entities(entity_dict_list, engine, 'Output')
+        results = select_all_input_output_pairs(engine)
+        assert all(row.Input.id == row.Output.input_id for row in results)
