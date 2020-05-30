@@ -1,0 +1,9 @@
+table_class: 'Source'
+
+records:
+    source0:
+        type: 'Website'
+    source1:
+        type: 'News'
+    source2:
+        type: 'Twitter'

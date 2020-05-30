@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Column, Integer, DateTime, Float, JSON, String, ForeignKey
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, JSON, String
 from sqlalchemy.ext.declarative import declarative_base
 
 base_cls = declarative_base()
@@ -42,6 +42,7 @@ class Model(base_cls):
     __tablename__ = 'model'
     id = Column(String, primary_key=True)
     name = Column(String, nullable=False)
+    human = Column(Boolean, nullable=False)
     config = Column(JSON, nullable=False)
     desc = Column(String, nullable=True)
     date = Column(DateTime, nullable=False, default=datetime.utcnow)
@@ -65,14 +66,17 @@ class Source(base_cls):
 @register_table_class
 class Misinformation(base_cls):
     __tablename__ = 'misinformation'
-    text = Column(String, primary_key=True)
-    model_id = Column(String, ForeignKey('model.id'), primary_key=True)
-    label_id = Column(String, ForeignKey('label.id'), nullable=False)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    text = Column(String, nullable=False)
+    url = Column(JSON, nullable=True)
+    source = Column(String, nullable=False)
+    reliability = Column(Float, nullable=False)
+    misc = Column(JSON, nullable=True)
     date = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     @classmethod
     def check_if_exists(cls, entity, session):
-        return session.query(cls.text).filter_by(text=entity.text, model_id=entity.model_id).scalar() is not None
+        return session.query(cls.text).filter_by(text=entity.text).scalar() is not None
 
 
 @register_table_class
@@ -96,7 +100,8 @@ class Output(base_cls):
     id = Column(Integer, primary_key=True, autoincrement=True)
     input_id = Column(Integer, ForeignKey('input.id'), nullable=False)
     model_id = Column(String, ForeignKey('model.id'), nullable=False)
-    prediction = Column(String, ForeignKey('label.id'), nullable=False)
+    misinfo_id = Column(Integer, ForeignKey('misinformation.id'), nullable=False)
+    label_id = Column(Integer, ForeignKey('label.id'), nullable=False)
     confidence = Column(Float, nullable=False)
     misc = Column(JSON, nullable=True)
     date = Column(DateTime, nullable=False, default=datetime.utcnow)
