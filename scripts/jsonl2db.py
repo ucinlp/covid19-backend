@@ -16,13 +16,17 @@ def get_argparser():
 
 
 def modify_records(custom_type, records):
+    record_list = list()
     if custom_type == 'initial_wiki':
         for i in range(len(records)):
             old_record = records[i]
-            record = {'id': old_record.pop('id'), 'text': old_record.pop('canonical_sentence'),
-                      'source': old_record.pop('origin'), 'reliability': old_record.pop('reliability_score'),
+            record = {'source': old_record.pop('origin'), 'reliability': 1,
                       'url': json.dumps({'list': old_record.pop('sources')}), 'misc': json.dumps(old_record)}
-            records[i] = record
+            for pos_variation in old_record.pop('pos_variations'):
+                copy_record = record.copy()
+                copy_record['text'] = pos_variation
+                record_list.append(copy_record)
+    return record_list
 
 
 def add_records(records, table_class_name, db_file_path):
@@ -35,7 +39,7 @@ def main(args):
         records = [json.loads(line) for line in fp]
 
     if args.custom is not None:
-        modify_records(args.custom, records)
+        records = modify_records(args.custom, records)
     add_records(records, args.table, args.db)
 
 
