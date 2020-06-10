@@ -57,3 +57,10 @@ For annotation purposes, we want to be able to transfer our data files to Google
 ```(bash)
 python -m backend.utils.jsonl_to_gsheet
 ```
+
+## Setting up DB
+```
+python3 -m scripts.yaml2db --config configs/db/source.yaml --db adhoc_backend.db
+python3 -m scripts.yaml2db --config configs/db/label.yaml --db adhoc_backend.db
+python3 -m scripts.yaml2db --config configs/db/model.yaml --db adhoc_backend.db
+```
