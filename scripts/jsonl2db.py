@@ -10,7 +10,7 @@ def get_argparser():
     parser = argparse.ArgumentParser(description='JSONL to DB')
     parser.add_argument('--input', required=True, type=lambda p: Path(p), help='input JSONL file path')
     parser.add_argument('--table', required=True, help='table class name')
-    parser.add_argument('--custom', help='modify records before adding, for a specific type of input file ')
+    parser.add_argument('--custom', help='modify records before adding, for a specific type of input file')
     parser.add_argument('--db', required=True, type=lambda p: Path(p), help='output DB file path')
     return parser
 
