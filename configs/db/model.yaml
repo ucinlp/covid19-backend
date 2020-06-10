@@ -1,0 +1,7 @@
+table_class: 'Model'
+
+records:
+    model1:
+        id: 'Arjuna'
+        name: 'Arjuna Ugarte'
+        human: True
