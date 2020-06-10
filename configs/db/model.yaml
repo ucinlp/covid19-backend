@@ -5,3 +5,5 @@ records:
         id: 'Arjuna'
         name: 'Arjuna Ugarte'
         human: True
+        config:
+            dummy: 'dummy config'
