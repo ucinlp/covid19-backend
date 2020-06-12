@@ -26,7 +26,7 @@ def modify_records(custom_type, records, table_class_name):
 
             record = dict()
             if table_class_name == 'Input':
-                record = {'id': len(record_list) + 1, 'source': 'Twitter', 'source_id': tweet_id, 'text': tweet}
+                record = {'id': len(record_list) + 1, 'source_type': 'Twitter', 'source_id': tweet_id, 'text': tweet}
             elif table_class_name == 'Output':
                 record = {'input_id': len(record_list) + 1, 'confidence': 1, 'model_id': 'Arjuna',
                           'misinfo_id': misconception_id,
