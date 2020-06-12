@@ -4,7 +4,7 @@ from pathlib import Path
 import yaml
 
 from backend.stream.common.misc_util import overwrite_config
-from backend.stream.db.operation import add_entities
+from backend.stream.db.operation import add_records
 from backend.stream.db.util import get_engine
 
 
@@ -16,9 +16,9 @@ def get_argparser():
     return parser
 
 
-def add_records(records_dict, table_class_name, db_file_path):
+def insert_records(records_dict, table_class_name, db_file_path):
     engine = get_engine(db_file_path)
-    add_entities(records_dict.values(), engine, table_class_name)
+    add_records(records_dict.values(), engine, table_class_name)
 
 
 def main(args):
@@ -27,7 +27,7 @@ def main(args):
 
     if args.json is not None:
         overwrite_config(config, args.json)
-    add_records(config['records'], config['table_class'], args.db)
+    insert_records(config['records'], config['table_class'], args.db)
 
 
 if __name__ == '__main__':

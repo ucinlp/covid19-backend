@@ -2,7 +2,7 @@ import argparse
 import csv
 from pathlib import Path
 
-from backend.stream.db.operation import add_entities
+from backend.stream.db.operation import add_records
 from backend.stream.db.util import get_engine
 
 
@@ -36,9 +36,9 @@ def modify_records(custom_type, records, table_class_name):
     return record_list
 
 
-def add_records(records, table_class_name, db_file_path):
+def insert_records(records, table_class_name, db_file_path):
     engine = get_engine(db_file_path)
-    add_entities(records, engine, table_class_name)
+    add_records(records, engine, table_class_name)
 
 
 def main(args):
@@ -48,7 +48,7 @@ def main(args):
     table_class_name = args.table
     if args.custom is not None:
         records = modify_records(args.custom, records, table_class_name)
-    add_records(records, table_class_name, args.db)
+    insert_records(records, table_class_name, args.db)
 
 
 if __name__ == '__main__':
