@@ -24,15 +24,15 @@ def modify_records(custom_type, records, table_class_name):
             if len(label) == 0 or len(tweet_id) == 0:
                 continue
 
-            record = {'source': 'Twitter', 'source_id': tweet_id, 'text': tweet}
-            if table_class_name == 'Output':
-                record['confidence'] = 1
-                record['Arjuna'] = 1
-                record['misinfo_id'] = misconception_id
-                record['label_id'] = 0 if label == 'pos' else 1 if label == 'neg' else 2
-            elif table_class_name != 'Input':
-                continue
-            record_list.append(record)
+            record = dict()
+            if table_class_name != 'Input':
+                record = {'id': len(record_list) + 1, 'source': 'Twitter', 'source_id': tweet_id, 'text': tweet}
+            elif table_class_name == 'Output':
+                record = {'input_id': len(record_list) + 1, 'confidence': 1, 'model_id': 'Arjuna',
+                          'misinfo_id': misconception_id,
+                          'label_id': 0 if label == 'pos' else 1 if label == 'neg' else 2}
+            if len(record) > 0:
+                record_list.append(record)
     return record_list
 
 
