@@ -57,3 +57,22 @@ def select_all_input_output_pairs(engine):
         if connection is not None:
             session.close()
     return results
+
+
+def get_inputs(engine, source=None):
+    Input.metadata.create_all(bind=engine, checkfirst=True)
+    session = sessionmaker(bind=engine)()
+    results, connection = None, None
+    try:
+        connection = engine.connect()
+        if source is not None:
+            results = connection.execute(select([Input]).where(Input.source_type == source))
+        else:
+            results = connection.execute(select([Input]))
+        connection.close()
+    except SQLAlchemyError as e:
+        print(e)
+    finally:
+        if connection is not None:
+            session.close()
+    return results

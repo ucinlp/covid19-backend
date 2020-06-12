@@ -4,7 +4,7 @@ from unittest import TestCase
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from backend.stream.db.operation import add_entities, select_all, select_all_input_output_pairs
+from backend.stream.db.operation import add_entities, select_all, select_all_input_output_pairs, get_inputs
 from backend.stream.db.table import Label, Reference, Model, Source, Misinformation, Input, Output
 
 
@@ -163,3 +163,20 @@ class OperationTest(TestCase):
         add_entities(entity_dict_list, engine, 'Output')
         results = select_all_input_output_pairs(engine)
         assert all(row.Input.id == row.Output.input_id for row in results)
+
+    def test_get_inputs(self):
+        engine = create_engine('sqlite://', echo=False)
+        # Register a source
+        add_entities([{'type': 'Twitter'}, {'type': 'Website'}], engine, 'Source')
+
+        entity_dict_list = [{'text': 'no idea', 'source_type': 'Twitter', 'source_id': 'some tweet ID'},
+                            {'text': 'ok', 'source_type': 'Website', 'source_id': 'N/A'}]
+        first_entities = add_entities(entity_dict_list, engine, 'Input')
+        assert len(first_entities) == len(entity_dict_list)
+
+        session = sessionmaker(bind=engine)()
+        results = get_inputs(engine)
+        assert all(row.id == i + 1 for i, row in enumerate(results))
+        results = get_inputs(engine, source='Twitter')
+        assert all(row.source_type == 'Twitter' for row in results)
+        session.close()
