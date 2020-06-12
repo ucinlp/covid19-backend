@@ -20,13 +20,11 @@ def modify_records(custom_type, records):
     if custom_type == 'initial_wiki':
         for i in range(len(records)):
             old_record = records[i]
-            pos_variatoins = old_record.pop('pos_variations')
-            record = {'id': old_record.pop('id'), 'source': old_record.pop('origin'), 'reliability': 1,
-                      'url': json.dumps({'list': old_record.pop('sources')}), 'misc': json.dumps(old_record)}
-            for pos_variation in pos_variatoins:
-                copy_record = record.copy()
-                copy_record['text'] = pos_variation
-                record_list.append(copy_record)
+            record = {'id': old_record.pop('id'), 'text': old_record.pop('canonical_text'),
+                      'source': old_record.pop('origin'), 'reliability': 1,
+                      'url': json.dumps({'list': old_record.pop('sources')})}
+            record['misc'] = json.dumps(old_record)
+            record_list.append(record)
     return record_list
 
 
