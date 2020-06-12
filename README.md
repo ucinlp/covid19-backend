@@ -64,4 +64,6 @@ python3 -m scripts.yaml2db --config configs/db/source.yaml --db backend.db
 python3 -m scripts.yaml2db --config configs/db/label.yaml --db backend.db
 python3 -m scripts.yaml2db --config configs/db/model.yaml --db backend.db
 python3 -m scripts.jsonl2db --input misconceptions.jsonl --table Misinformation --custom initial_wiki --db backend.db
+# merged.csv is not available on the repository as it contains tweet texts
+python3 -m scripts.csv2db --input merged.csv --table Output --custom initial_labeled_tweet --db backend.db
 ```

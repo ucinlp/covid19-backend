@@ -20,7 +20,7 @@ def modify_records(custom_type, records, table_class_name):
     record_list = list()
     if custom_type == 'initial_labeled_tweet':
         # Assuming input/output tables are empty, and model/label/misinformation tables are filled
-        for _, misconception_id, misconception, tweet, bert_score, label, tweet_id in range(len(records)):
+        for _, misconception_id, misconception, tweet, bert_score, label, tweet_id in records:
             if len(label) == 0 or len(tweet_id) == 0:
                 continue
 
