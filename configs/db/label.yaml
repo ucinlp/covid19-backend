@@ -1,0 +1,12 @@
+table_class: 'Label'
+
+records:
+    label0:
+        id: 0
+        name: 'misinformation'
+    label1:
+        id: 1
+        name: 'not misinformation'
+    label2:
+        id: 2
+        name: 'n/a'
