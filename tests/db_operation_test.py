@@ -135,12 +135,14 @@ class OperationTest(TestCase):
 
     def test_select_all(self):
         engine = create_engine('sqlite://', echo=False)
+        connection = engine.connect()
         entity_dict_list = [{'id': 0, 'name': 'misleading'}, {'id': 1, 'name': 'no scientific evidence'}]
         add_records(entity_dict_list, engine, 'Label')
-        results = select_all(engine, 'Label')
+        results = select_all(engine, connection, 'Label')
         keys = results.keys()
         values = [row.values() for row in results]
         assert keys == ['id', 'name', 'misc', 'date'] and len(values) == len(entity_dict_list)
+        connection.close()
 
     def test_select_all_input_output_pairs(self):
         engine = create_engine('sqlite://', echo=False)
@@ -162,8 +164,10 @@ class OperationTest(TestCase):
                             {'input_id': 2, 'model_id': 'bert-test-ver', 'label_id': 0,
                              'misinfo_id': 1, 'confidence': 0.5}]
         add_records(entity_dict_list, engine, 'Output')
-        results = select_all_input_output_pairs(engine)
+        session = sessionmaker(bind=engine)()
+        results = select_all_input_output_pairs(engine, session)
         assert all(row.Input.id == row.Output.input_id for row in results)
+        session.close()
 
     def test_get_inputs(self):
         engine = create_engine('sqlite://', echo=False)
@@ -175,12 +179,12 @@ class OperationTest(TestCase):
         first_entities = add_records(entity_dict_list, engine, 'Input')
         assert len(first_entities) == len(entity_dict_list)
 
-        session = sessionmaker(bind=engine)()
-        results = get_inputs(engine)
+        connection = engine.connect()
+        results = get_inputs(engine, connection)
         assert all(row.id == i + 1 for i, row in enumerate(results))
-        results = get_inputs(engine, source='Twitter')
+        results = get_inputs(engine, connection, source='Twitter')
         assert all(row.source_type == 'Twitter' for row in results)
-        session.close()
+        connection.close()
 
     def test_get_misinfo(self):
         engine = create_engine('sqlite://', echo=False)
@@ -196,12 +200,12 @@ class OperationTest(TestCase):
         first_entities = add_records(entity_dict_list, engine, 'Misinformation')
         assert len(first_entities) == len(entity_dict_list)
 
-        session = sessionmaker(bind=engine)()
-        results = get_misinfo(engine)
+        connection = engine.connect()
+        results = get_misinfo(engine, connection)
         assert all(row.id == i + 1 for i, row in enumerate(results))
-        results = get_misinfo(engine, source='CDC')
+        results = get_misinfo(engine, connection, source='CDC')
         assert all(row.source == 'CDC' for row in results)
-        session.close()
+        connection.close()
 
     def test_put_outputs(self):
         engine = create_engine('sqlite://', echo=False)
