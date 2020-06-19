@@ -42,7 +42,7 @@ def insert_records(records, table_class_name, db_file_path):
 
 
 def main(args):
-    with open(args.input, 'r') as fp:
+    with open(args.input, 'r', encoding='utf8') as fp:
         records = [row for row in csv.reader(fp)]
 
     table_class_name = args.table

@@ -1,92 +1,39 @@
 import torch
-from torch.utils.data import DataLoader, Dataset
-from tqdm import tqdm
 import argparse
 from pathlib import Path
-import os
 import pandas as pd
 import numpy as np
-from collections import OrderedDict
-
 from backend.ml.misconception import MisconceptionDataset
 from backend.ml.sentence_bert import SentenceBertClassifier
-
-class AnnotatedDataset(Dataset):
-
-    def __init__(self, fname):
-        self._fname = fname
-
-        posts, misinfos, ids, labels = self._read(fname)
-
-        self._posts = posts
-        self._misinfos = misinfos
-        self._labels = labels
-        self._ids = ids
-
-    def _read(self, fname):
-
-        annotations = pd.read_csv (fname)
-        label_to_idx = {
-        'pos': 0,
-        'neg': 1,
-        'na': 2 }
-
-        # Filter
-        mask = (annotations['tweet'].str.len() < 500) & (annotations['misconception'].str.len() < 500) & (annotations['label'].isin(label_to_idx))
-        annotations = annotations.loc[mask]
-
-        # To List
-        posts = annotations['tweet'].to_list()
-        misinfos = annotations['misconception'].to_list()   
-        ids = annotations['misconception_id'].to_list()  
-        labels = annotations['label'].to_list()
-        labels = [label_to_idx[l] for l in labels]
-
-        return posts, misinfos, ids, labels
-
-    def __len__(self):
-        return len(self._labels)
-
-    def __getitem__(self, idx):
-        post = self._posts[idx]
-        misinfo = self._misinfos[idx]
-        label = self._labels[idx]
-        id = self._ids[idx]
-        return post, misinfo, id, label 
+from backend.stream.db.table import  Output
+from backend.stream.db.util import get_engine
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.sql import select
+from sqlalchemy import and_
 
 
-def load_model (model_dir, weights):
-    """
-    Load Fine Tuned SentenceBertClassifier
+def confusion_matrix(y, y_hat):
     
-    # Parameters
-    model_dir : PATH
-        Directory path for trained model
-    weights: PATH 
-        Path for weights.pt
-    
-    # Returns
-    model : SentenceBertClassifier
-    """    
-
-    model = SentenceBertClassifier(model_name = model_dir , num_classes=3)
-    state_dict = torch.load(weights)
-
-    # remove `module.`
-    new_state_dict = OrderedDict()
-    for k, v in state_dict.items():
-        name = k[7:] 
-        new_state_dict[name] = v
-
-    model.load_state_dict(new_state_dict)
-    
-    return model
+    confusion_matrix = torch.zeros(3,3)
+            
+    for t, p in zip(y, y_hat):
+        confusion_matrix[t, p] += 1
+        
+    # Print Confusion Matrix
+    row_labels = ['True: Pos', 'True: Neg', 'True: N/A']
+    column_labels = ['Pred: Pos', 'Pred: Neg', 'Pred: N/A']
+    df = pd.DataFrame(confusion_matrix.numpy(), columns=column_labels, index=row_labels)
+    print (df)
+        
+    return confusion_matrix
 
 def accuracy (confusion_matrix: torch.Tensor):    
     acc = confusion_matrix.diag().sum()/confusion_matrix.sum()  
+        
     return acc.item()
 
-def precision_recall(confusion_matrix: torch.Tensor):
+
+def precision_recall_f1(confusion_matrix: torch.Tensor, beta =2):
     
     """
     Compute Macro and Micro Averaged Precision and Recall 
@@ -106,144 +53,188 @@ def precision_recall(confusion_matrix: torch.Tensor):
     true_pos = confusion_matrix.diag() #tp
     labels_pos = torch.sum(confusion_matrix, dim = 1) #tp+fn
         
-    class_precisions =  true_pos/preds_pos   
-    class_recalls = true_pos/labels_pos
-      
-    return class_precisions.tolist(), class_recalls.tolist()
+    class_precision =  true_pos/preds_pos  
+    class_recall = true_pos/labels_pos
+    class_f1 = beta*(class_precision*class_recall)/(class_precision+class_recall)
+             
+    return class_precision.tolist(), class_recall.tolist(), class_f1.tolist()
+
+
+def get_pred_ranks (db,model):
+  input_ids = []
+  labels = []
+  ranks = []
+
+  engine = get_engine(db)
+  connection = engine.connect()
+  annotated = get_outputs(engine, connection, 'Arjuna')
+
+  for a in annotated:
+    if ( a.label_id == 0 or a.label_id == 1) :
+        preds = get_outputs(engine, connection, model, a.input_id)
+        misinfo_ids = []
+        pos = [] # logit for positive prediction
+        neg = [] # logit for negative prediction
+        
+        for p in preds:
+            misinfo_ids.append (p.misinfo_id)
+            pos.append (p.misc[0])            
+            neg.append (p.misc[1])
+        
+        # If true label is positive, then sort by logit for positive prediction
+        # Otherwise sort by logit for negative prediction
+        if a.label_id == 0:
+            scores = pos
+        else:
+            scores = neg
+                
+        zipped = list(zip(misinfo_ids, scores))
+        sort = sorted(zipped, key=lambda x: x[1], reverse = True)
+        
+        # Find rank of misinformation in annotated data        
+        rank = [y[0] for y in sort].index(a.misinfo_id) + 1 
+        ranks.append (rank)
+        labels.append (a.label_id)
+        input_ids.append (a.input_id)
+            
+  connection.close() 
+  rank_df = pd.DataFrame ({ 'input_ids' : input_ids,
+                            'labels' : labels , 
+                            'ranks' : ranks,
+                            'inv_ranks' : [1/r for r in ranks] })
+
+  return rank_df
+
 
 def hits_k(df,k):
     hits = df[df.ranks <= k].shape[0]
     total = df.shape[0]
     
     return hits/total
-    
-def cm_metrics (model: SentenceBertClassifier, annotations: AnnotatedDataset, batch_size : int, num_classes=3):
-    
-    """
-    Returns Dictionary of Evaluation Metrics 
-    
-    # Parameters
-    model: SentenceBertClassifier
-        NLI classifier
-    annotations:  AnnotatedDataset
-        Test dataset with tweets, misconceptions, and corresponding labels (pos/neg/na)
-    batch_size : int
-        Batch sizes for predictions (default:10)
-    num_classes : int
-        Number of classes in classifier (deault = 3)
-        
-    # Printss
-    acc:
-        Accuracy    
-    class_precisions: Float 
-       Precision for each class
-    class_recalls: Float 
-       Recall for each class
-            
-    """
 
-    test_dataloader = DataLoader(
-        annotations,
-        batch_size = batch_size,
-        shuffle = False )
-    iterable = tqdm(test_dataloader, position=0, leave=True)
-    
-    confusion_matrix = torch.zeros(num_classes, num_classes)
-       
-    for posts, misinfos, id, labels in iterable:
-        with torch.no_grad():
-            logits = model(posts, misinfos)
-            _, preds = logits.max(dim=-1) 
-            
-            for y, y_pred in zip(labels, preds):
-                confusion_matrix[y, y_pred] += 1
+def hits_k_range(df, n):
+  k = []
+  overall = []
+  pos = []
+  neg = []
+  for i in range(n):
+    k.append(i+1)
+    overall.append ( hits_k(df, i+1) ) # Overall
 
-    acc = accuracy(confusion_matrix)
-    class_precisions, class_recalls = precision_recall(confusion_matrix)  
+    for j in range(2): # By Class
+        cls_df = rank_df[rank_df['labels'] == j]
+        if j == 0:
+          pos.append (hits_k(cls_df, i+1))
+        else :
+          neg.append (hits_k(cls_df, i+1))
+
+  hits_df = pd.DataFrame({'k' : k,
+                          'Overall' : overall,
+                          'Positive' : pos,
+                          'Negative' : neg })
+
    
-    print ('Accuracy : ', acc)
-    print ('Class Precisions : ', class_precisions)    
-    print ('Class Recalls : ', class_recalls)
-
-def rank_metrics (model: SentenceBertClassifier, annotations: AnnotatedDataset, misconceptions: MisconceptionDataset, k):
-    
-    """
-    Returns Dictionary of Evaluation Metrics 
-    
-    # Parameters
-    model: SentenceBertClassifier
-        NLI classifier
-    annotations:  AnnotatedDataset
-        Test dataset with tweets, misconceptions, and corresponding labels (pos/neg/na)
-    misconceptions : MisconceptionDataset
-    k : int
-        Value of K for Hits@k
         
-    # Prints
-        Hits@k and MRR for Positive and Negative classes
-            
-    """
-    ### Hits at K at MRR    
-    ranks = []
-    labels = []
-    for post, misinfo, id, label in tqdm(annotations):
-        scores=[]
-        ids = []        
-        if ( label == 0 or label == 1) : #Only for Positive or Negative Labels            
-            for miscon in misconceptions:           
-                with torch.no_grad():
-                    logits = model([post], [miscon.pos_variations[0]])
-                    logit = logits[0][label]
-                    
-                    ids.append( int( miscon.id ) )
-                    scores.append(logit.item())    
-             
-            zipped = list(zip(ids, scores))
-            sort = sorted(zipped, key=lambda x: x[1], reverse = True)
-                
-            rank = [y[0] for y in sort].index(id) + 1
-            ranks.append (rank)
-            labels.append (label)
-            
-    rank_df = pd.DataFrame ({'labels' : labels , 
-                             'ranks' : ranks,
-                             'inv_ranks' : [1/r for r in ranks] })
-    
-    for i in range(2):
-        print ('--- CLASS = ', i, '---')
+  return hits_df
+
+# Add more cases for possible combinations of inputs
+def get_outputs(engine, connection, model=None, input=None, misinfo=None):
+    Output.metadata.create_all(bind=engine, checkfirst=True)
+    results = None
+    try:
+        if model is not None:
+            if input is not None:
+                if misinfo is not None:
+                    results = connection.execute(select([Output]).where(and_(Output.model_id == model, Output.input_id == input, Output.misinfo_id == misinfo)))
+                else: 
+                     results = connection.execute(select([Output]).where(and_(Output.model_id == model, Output.input_id == input)))
+            else:
+                 results = connection.execute(select([Output]).where(Output.model_id == model))
+        else:
+            results = connection.execute(select([Output]))
+    except SQLAlchemyError as e:
+        print(e)
+    return results
+
+####################################
+########### CMD OPTIONS ############
+####################################
+parser = argparse.ArgumentParser()
+parser.add_argument('--db', type=str, required=True)
+parser.add_argument('--model', type=str, required=True)       
+args = parser.parse_args()
+
+####################################
+###### Load Annotated Data #########
+####################################
+engine = get_engine(args.db)
+connection = engine.connect()
+annotated = get_outputs(engine, connection, 'Arjuna')
+
+####################################
+###### Load Predictions ############
+####################################
+y = []
+y_hat = []
+for a in annotated:
+        preds = get_outputs(engine, connection, args.model , a.input_id, a.misinfo_id)
+        y.append (a.label_id)
+        for p in preds:
+            y_hat.append(p.label_id)
+   
+connection.close()
+
+##################################
+######## Compute Metrics #########
+##################################
+# Confusion Matrix
+cm = confusion_matrix(y,y_hat)
+
+##########################
+####### Accuracy #########
+##########################
+acc = accuracy (cm)
+print ('Accuracy : ', round(acc*100,3), '%')
+
+###########################
+## Precision, Recall, F1 ##
+###########################
+class_precision, class_recall, class_f1 = precision_recall_f1(cm)
+
+# Print
+print ('--- Positive ---')
+print ('Precision : ', round(class_precision[0]*100,3), '%' )
+print ('Recall : ', round(class_recall[0]*100,3), '%' )
+print ('F1 : ', round(class_f1[0]*100,3), '%', '\n' )
+print ('--- Negative ---')
+print ('Precision : ', round(class_precision[1]*100,3), '%' )
+print ('Recall : ', round(class_recall[1]*100,3), '%' )
+print ('F1 : ', round(class_f1[1]*100,3), '%', '\n' )
+print ('--- Negative ---')
+print ('Precision : ', round(class_precision[2]*100,3), '%' )
+print ('Recall : ', round(class_recall[2]*100,3), '%' )
+print ('F1 : ', round(class_f1[2]*100,3), '%', '\n' )
+
+##########################
+##### Rank Metrics  ######
+##########################
+# Get Ranks
+rank_df = get_pred_ranks(args.db, args.model)
+
+# MRR
+mrr = np.mean(rank_df.inv_ranks)
+print ('MRR : ', mrr)
+
+for i in range(2):
         df = rank_df[rank_df['labels'] == i]
-        hk = hits_k (df, k)
         mrr = np.mean(df.inv_ranks)
-        print ('Hits at K = ', k, ' : ', hk)
-        print ('MRR : ', mrr)
-     
+        if i == 0:
+          cls = 'Positive'
+        else:
+          cls = 'Negative'        
+        print ('MRR for class =', cls, ' : ', mrr)
+        
 
-def main():
-    
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--model-dir', type=str, required=True)
-    parser.add_argument('--weights',type=Path, required=True)    
-    parser.add_argument('--test', type=Path, required=True)
-    parser.add_argument('--misinfo', type=Path, required=True)
-    parser.add_argument('--k', type=int, default=3)
-    parser.add_argument('--batch-size', type=int, default=10)
-    args = parser.parse_args()
-    
-    with open(args.misinfo, 'r') as f:
-        misconceptions = MisconceptionDataset.from_jsonl(f)
-    
-    annotations = AnnotatedDataset(args.test)
-    model = load_model(args.model_dir, args.weights)
-    model.eval()
-    
-    cm_metrics (model, annotations, args.batch_size)    
-    rank_metrics (model, annotations, misconceptions, args.k)
-
-if __name__ == '__main__':
-    main()
-
-    
-
-
-
-
+# Hits at K
+hits = hits_k_range(rank_df, 10)
+print (hits)
