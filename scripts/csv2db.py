@@ -9,7 +9,7 @@ from backend.stream.db.util import get_engine
 def get_argparser():
     parser = argparse.ArgumentParser(description='CSV to DB')
     parser.add_argument('--input', required=True, type=lambda p: Path(p), help='input csv file path')
-    parser.add_argument('--table', required=True, help='table class name')
+    parser.add_argument('--tables', required=True, metavar='N', nargs='+', help='list of table class names')
     parser.add_argument('--custom', help='modify records before adding, for a specific type of input file')
     parser.add_argument('--db', required=True, type=lambda p: Path(p), help='output DB file path')
     return parser
@@ -66,7 +66,7 @@ def main(args):
     with open(args.input, 'r') as fp:
         records = [row for row in csv.reader(fp)]
 
-    table_class_names = args.table.split(',')
+    table_class_names = args.tables
     if len(table_class_names) == 1:
         table_class_name = table_class_names[0]
         records = modify_records(args.custom, records, table_class_name)
