@@ -53,7 +53,7 @@ def main(args):
 
     if args.custom is not None:
         records = modify_records(args.custom, records)
-    insert_records(records, args.table, args.db)
+    insert_records(records, args.table, args.db, args.output)
 
 
 if __name__ == '__main__':
