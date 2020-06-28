@@ -35,7 +35,7 @@ def modify_records(custom_type, records, table_class_name, record_ids=None):
     elif custom_type == 'old_csv_format':
         # header won't be used
         if record_ids is None:
-            records = records.pop(0)
+            records.pop(0)
         else:
             assert len(records) == len(record_ids), \
                 '# records {} should be equal to # record_ids {}'.format(len(records), len(record_ids))
