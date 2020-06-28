@@ -30,6 +30,9 @@ def modify_records(custom_type, records):
     else:
         for i in range(len(records)):
             old_record = records[i]
+            if 'id' in old_record:
+                old_record.pop('id')
+
             record = {'text': old_record.pop('canonical_sentence'),
                       'source': old_record.pop('origin'), 'reliability': 1,
                       'url': json.dumps({'list': old_record.pop('sources')})}
