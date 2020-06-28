@@ -27,7 +27,7 @@ def modify_records(custom_type, records):
                       'url': json.dumps({'list': old_record.pop('sources')})}
             record['misc'] = json.dumps(old_record)
             record_list.append(record)
-    else:
+    elif custom_type == 'old_jsonl_format':
         for i in range(len(records)):
             old_record = records[i]
             if 'id' in old_record:
