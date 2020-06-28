@@ -12,6 +12,8 @@ def get_argparser():
     parser.add_argument('--table', required=True, help='table class name')
     parser.add_argument('--custom', help='modify records before adding, for a specific type of input file')
     parser.add_argument('--db', required=True, type=lambda p: Path(p), help='output DB file path')
+    parser.add_argument('--output', default=Path('./index.txt'), type=lambda p: Path(p),
+                        help='output file path with inserted IDs in the target table')
     return parser
 
 
@@ -25,12 +27,24 @@ def modify_records(custom_type, records):
                       'url': json.dumps({'list': old_record.pop('sources')})}
             record['misc'] = json.dumps(old_record)
             record_list.append(record)
+    else:
+        for i in range(len(records)):
+            old_record = records[i]
+            record = {'text': old_record.pop('canonical_sentence'),
+                      'source': old_record.pop('origin'), 'reliability': 1,
+                      'url': json.dumps({'list': old_record.pop('sources')})}
+            record['misc'] = json.dumps(old_record)
+            record_list.append(record)
     return record_list
 
 
-def insert_records(records, table_class_name, db_file_path):
+def insert_records(records, table_class_name, db_file_path, output_file_path):
     engine = get_engine(db_file_path)
-    add_records(records, engine, table_class_name)
+    _, record_ids = add_records(records, engine, table_class_name, returns_id=True)
+    Path(output_file_path).parent.mkdir(parents=True, exist_ok=True)
+    with open(output_file_path, 'w') as fp:
+        for record_id in record_ids:
+            fp.write('{}\n'.format(record_id))
 
 
 def main(args):
