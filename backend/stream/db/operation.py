@@ -5,11 +5,12 @@ from sqlalchemy.sql import select
 from backend.stream.db.table import get_table_class, Input, Output, Misinformation
 
 
-def add_records(record_dicts, engine, table_class_name):
+def add_records(record_dicts, engine, table_class_name, returns_id=False):
     table_cls = get_table_class(table_class_name)
     table_cls.metadata.create_all(bind=engine, checkfirst=True)
     session = sessionmaker(bind=engine)()
     inserted_record_dict_list = list()
+    inserted_id_list = list()
     try:
         record_list = list()
         for record_dict in record_dicts:
@@ -20,10 +21,18 @@ def add_records(record_dicts, engine, table_class_name):
 
         session.add_all(record_list)
         session.commit()
+        if returns_id:
+            session.flush()
+            for r in record_list:
+                session.refresh(r)
+                inserted_id_list.append(r.id)
     except SQLAlchemyError as e:
         print(e)
     finally:
         session.close()
+
+    if returns_id:
+        return inserted_record_dict_list, inserted_id_list
     return inserted_record_dict_list
 
 
