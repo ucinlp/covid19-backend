@@ -123,6 +123,7 @@ class SentenceBertClassifier(Detector, torch.nn.Module):
         device = next(self.parameters()).device
         model_input = self._tokenizer.batch_encode_plus(
             sentences,
+            max_length=128,
             pad_to_max_length=True,
             return_attention_mask=True,
             return_tensors='pt'
@@ -131,7 +132,7 @@ class SentenceBertClassifier(Detector, torch.nn.Module):
         mask = model_input['attention_mask']
         embeddings, *_ = self._model(**model_input)
         masked_embeddings = embeddings * mask.unsqueeze(-1)
-        pooled_embeddings = masked_embeddings.mean(1)  # average over sequence dim
+        pooled_embeddings = masked_embeddings.sum(1) / mask.sum(1).unsqueeze(-1)
         return pooled_embeddings
 
     @overrides

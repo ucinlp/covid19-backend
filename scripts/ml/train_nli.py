@@ -7,10 +7,10 @@ import logging
 import os
 from pathlib import Path
 
-from apex import amp
-from apex.parallel import DistributedDataParallel
 import transformers
 import torch
+from torch.cuda import amp
+from torch.nn.parallel import DistributedDataParallel
 from torch.utils.data import DataLoader, Dataset, DistributedSampler, RandomSampler
 from tqdm import tqdm
 
@@ -78,6 +78,7 @@ def main():
     parser.add_argument('--batch_size', type=int, default=8)
     parser.add_argument('--epochs', type=int, default=3)
     parser.add_argument('--lr', type=float, default=1e-4)
+    parser.add_argument('-a', '--accumulation_steps', type=int, default=1)
 
     parser.add_argument('--fp16', action='store_true')
     # Automatically supplied by torch.distributed.launch
@@ -128,8 +129,10 @@ def main():
             iterable = tqdm(train_dataloader)
         else:
             iterable = train_dataloader
-        for premises, hypotheses, labels in iterable:
-            optimizer.zero_grad()
+        for i, (premises, hypotheses, labels) in enumerate(iterable):
+            if not i % args.accumulation_steps:
+                optimizer.step()
+                optimizer.zero_grad()
             logits = model(premises, hypotheses)
             _, preds = logits.max(dim=-1)
             labels = torch.tensor([LABEL_TO_IDX[l] for l in labels]).cuda()
@@ -142,7 +145,6 @@ def main():
                 loss.backward()
             if args.local_rank == 0:
                 iterable.set_description(f'Loss: {loss : 0.4f} - Acc: {acc : 0.4f}')
-            optimizer.step()
 
         logger.info('Evaluating...')
         model.eval()
