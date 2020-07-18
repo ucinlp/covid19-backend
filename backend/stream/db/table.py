@@ -91,7 +91,7 @@ class Input(base_cls):
 
     @classmethod
     def check_if_exists(cls, entity, session):
-        return session.query(cls.id).filter_by(id=entity.id).scalar() is not None
+        return session.query(cls.source_type).filter_by(source_id=entity.source_id).scalar() is not None
 
 
 @register_table_class
