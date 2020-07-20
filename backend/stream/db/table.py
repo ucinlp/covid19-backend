@@ -91,6 +91,7 @@ class Input(base_cls):
 
     @classmethod
     def check_if_exists(cls, entity, session):
+        # Should be used before inserting new records
         return session.query(cls.source_type).filter_by(source_id=entity.source_id).scalar() is not None
 
 
