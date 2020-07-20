@@ -12,7 +12,7 @@ def get_argparser():
     parser.add_argument('--table', required=True, help='table class name')
     parser.add_argument('--custom', help='modify records before adding, for a specific type of input file')
     parser.add_argument('--db', required=True, type=lambda p: Path(p), help='output DB file path')
-    parser.add_argument('--output', default=Path('./index.txt'), type=lambda p: Path(p),
+    parser.add_argument('--output', default=Path('./record_ids.txt'), type=lambda p: Path(p),
                         help='output file path with inserted IDs in the target table')
     return parser
 
