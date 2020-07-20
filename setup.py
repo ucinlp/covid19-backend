@@ -22,7 +22,7 @@ setup(
         'google-auth-oauthlib',
         'gunicorn>=20.0.4',
         'overrides>=2.8.0',
-        'transformers[torch]>=2.7.0',
+        'transformers[torch]==2.7.0',  # TODO: Upgrade to version 3.
         'sqlalchemy>=1.3.16'
     ],
     extras_require={
