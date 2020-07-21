@@ -19,17 +19,20 @@ def modify_records(custom_type, records, table_class_name, record_ids=None):
     record_list = list()
     if custom_type == 'initial_labeled_tweet':
         # Assuming input/output tables are empty, and model/label/misinformation tables are filled
+        tweet_id_set = set()
         for _, misconception_id, misconception, tweet, bert_score, label, tweet_id in records:
-            if len(label) == 0 or len(tweet_id) == 0:
+            if len(label) == 0 or len(tweet_id) == 0 or tweet_id in tweet_id_set:
                 continue
 
             record = dict()
             if table_class_name == 'Input':
                 record = {'id': len(record_list) + 1, 'source_type': 'Twitter', 'source_id': tweet_id, 'text': tweet}
+                tweet_id_set.add(tweet_id)
             elif table_class_name == 'Output':
                 record = {'input_id': len(record_list) + 1, 'confidence': 1, 'model_id': 'Arjuna',
                           'misinfo_id': misconception_id,
                           'label_id': 0 if label == 'pos' else 1 if label == 'neg' else 2}
+                tweet_id_set.add(tweet_id)
             if len(record) > 0:
                 record_list.append(record)
     elif custom_type == 'old_csv_format':
