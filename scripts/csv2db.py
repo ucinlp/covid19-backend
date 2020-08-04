@@ -15,43 +15,20 @@ def get_argparser():
     return parser
 
 
-def modify_records(custom_type, records, table_class_name, record_ids=None):
+def modify_records(custom_type, records, table_class_name, srcid2inputid_dict=None):
     record_list = list()
-    if custom_type == 'initial_labeled_tweet':
-        # Assuming input/output tables are empty, and model/label/misinformation tables are filled
-        tweet_id_set = set()
-        for _, misconception_id, misconception, tweet, bert_score, label, tweet_id in records:
+    tweet_id_set = set()
+    if custom_type == 'old_csv_format':
+        for i, (_, misconception_id, misconception, tweet, _, label, tweet_id) in enumerate(records):
             if len(label) == 0 or len(tweet_id) == 0 or tweet_id in tweet_id_set:
                 continue
 
             record = dict()
             if table_class_name == 'Input':
-                record = {'id': len(record_list) + 1, 'source_type': 'Twitter', 'source_id': tweet_id, 'text': tweet}
-                tweet_id_set.add(tweet_id)
-            elif table_class_name == 'Output':
-                record = {'input_id': len(record_list) + 1, 'confidence': 1, 'model_id': 'Arjuna',
-                          'misinfo_id': misconception_id,
-                          'label_id': 0 if label == 'pos' else 1 if label == 'neg' else 2}
-                tweet_id_set.add(tweet_id)
-            if len(record) > 0:
-                record_list.append(record)
-    elif custom_type == 'old_csv_format':
-        # header won't be used
-        if record_ids is None:
-            records.pop(0)
-        else:
-            assert len(records) == len(record_ids), \
-                '# records {} should be equal to # record_ids {}'.format(len(records), len(record_ids))
-
-        for i, (misconception_id, misconception, tweet, label, tweet_id) in enumerate(records):
-            if len(label) == 0 or len(tweet_id) == 0:
-                continue
-
-            record = dict()
-            if table_class_name == 'Input':
                 record = {'source_type': 'Twitter', 'source_id': tweet_id, 'text': tweet}
+                tweet_id_set.add(tweet_id)
             elif table_class_name == 'Output':
-                record = {'input_id': record_ids[i], 'confidence': 1, 'model_id': 'Arjuna',
+                record = {'input_id': srcid2inputid_dict[tweet_id], 'confidence': 1, 'model_id': 'Arjuna',
                           'misinfo_id': misconception_id,
                           'label_id': 0 if label == 'pos' else 1 if label == 'neg' else 2}
             if len(record) > 0:
@@ -75,11 +52,13 @@ def main(args):
         records = modify_records(args.custom, records, table_class_name)
         insert_records(records, table_class_name, args.db)
     elif len(table_class_names) == 2:
-        record_ids = None
+        srcid2inputid_dict = dict()
         for table_class_name in table_class_names:
-            record_dicts = modify_records(args.custom, records, table_class_name, record_ids)
+            record_dicts = modify_records(args.custom, records, table_class_name, srcid2inputid_dict)
             record_ids = insert_records(record_dicts, table_class_name, args.db)
-
+            if len(srcid2inputid_dict) == 0:
+                for record_id, record_dict in zip(record_ids, record_dicts):
+                    srcid2inputid_dict[record_dict['source_id']] = record_id
 
 
 if __name__ == '__main__':
