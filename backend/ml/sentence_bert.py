@@ -16,13 +16,11 @@ def cosine_similarity(x: torch.FloatTensor,
                       y: torch.FloatTensor) -> torch.FloatTensor:
     """
     Measures the pairwise cosine similarity between two tensors.
-
     # Parameters
     x : torch.FloatTensor
         Input tensor of shape (num_cands, embedding_dim)
     y: torch.FloatTensor
         Input tensor of shape (num_refs, embedding_dim)
-
     # Returns
     scores : torch.FloatTensor
         Tensor of pairwise cosine similarity scores, with shape: (num_cands, num_refs)
@@ -52,7 +50,6 @@ class SentenceBertBase(Detector, torch.nn.Module):
                 loss_kwargs: Dict[str, Any] = None) -> torch.FloatTensor:
         """
         Returns triplet margin loss so that model can be fine-tuned for ranking.
-
         # Parameters
         anchor_sentences: List[str]
             List of "anchor" sentences.
@@ -64,7 +61,6 @@ class SentenceBertBase(Detector, torch.nn.Module):
             Optional dictionary of arguments to be passed to the `triplet_margin_loss` function.
             See PyTorch docs for more details:
                 https://pytorch.org/docs/master/nn.functional.html#triplet-margin-loss
-
         # Returns
         loss : torch.FloatTensor
             Scalar loss value.
@@ -123,6 +119,7 @@ class SentenceBertClassifier(Detector, torch.nn.Module):
         device = next(self.parameters()).device
         model_input = self._tokenizer.batch_encode_plus(
             sentences,
+            max_length=128,
             pad_to_max_length=True,
             return_attention_mask=True,
             return_tensors='pt'
@@ -131,7 +128,7 @@ class SentenceBertClassifier(Detector, torch.nn.Module):
         mask = model_input['attention_mask']
         embeddings, *_ = self._model(**model_input)
         masked_embeddings = embeddings * mask.unsqueeze(-1)
-        pooled_embeddings = masked_embeddings.mean(1)  # average over sequence dim
+        pooled_embeddings = masked_embeddings.sum(1) / mask.sum(1).unsqueeze(-1)
         return pooled_embeddings
 
     @overrides

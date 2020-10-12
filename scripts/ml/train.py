@@ -1,11 +1,8 @@
-"""
-python -m torch.distributed.launch --nproc_per_node=$NUM_GPUS train_nli.py {ARGS}
-"""
 import argparse
-import json
 import logging
 import os
 from pathlib import Path
+import pandas as pd
 
 import transformers
 import torch
@@ -16,49 +13,41 @@ from tqdm import tqdm
 
 from backend.ml.sentence_bert import SentenceBertClassifier
 
-logger = logging.getLogger(__name__)
-
-
 LABEL_TO_IDX = {
-    'entailment': 0,
-    'contradiction': 1,
-    'neutral': 2
+    'agree': 0,
+    'disagree': 1,
+    'no_stance': 2
 }
 
 
-class NliDataset(Dataset):
+class CovidDataset(Dataset):
 
     def __init__(self, fname):
         self._fname = fname
 
-        premises, hypotheses, labels = self._read(fname)
+        headlines, bodies, labels = self._read(fname)
 
-        self._premises = premises
-        self._hypotheses = hypotheses
+        self._headlines = headlines
+        self._bodies = bodies
         self._labels = labels
 
     def _read(self, fname):
-        premises = []
-        hypotheses = []
-        labels = []
-        with open(fname, 'r') as f:
-            for line in f:
-                data = json.loads(line)
-                if data['gold_label'] not in LABEL_TO_IDX:
-                    continue
-                premises.append(data['sentence1'])
-                hypotheses.append(data['sentence2'])
-                labels.append(data['gold_label'])
-        return premises, hypotheses, labels
+        data = pd.read_csv (fname)
+        
+        headlines = data['tweet'].tolist()
+        bodies = data['misconception'].tolist()
+        labels = data['label'].tolist()
+
+        return headlines, bodies, labels
 
     def __len__(self):
         return len(self._labels)
 
     def __getitem__(self, idx):
-        premise = self._premises[idx]
-        hypothesis = self._hypotheses[idx]
+        headline = self._headlines[idx]
+        body = self._bodies[idx]
         label = self._labels[idx]
-        return premise, hypothesis, label
+        return headline, body, label
 
 
 def get_sampler(dataset, world_size, rank):
@@ -96,7 +85,7 @@ def main():
         torch.distributed.init_process_group(backend='nccl', init_method='env://')
 
     logger.info('Loading training data')
-    train_dataset = NliDataset(args.train)
+    train_dataset = FNCDataset(args.train)
     train_dataloader = DataLoader(
         train_dataset,
         batch_size=args.batch_size,
@@ -129,11 +118,11 @@ def main():
             iterable = tqdm(train_dataloader)
         else:
             iterable = train_dataloader
-        for i, (premises, hypotheses, labels) in enumerate(iterable):
+        for i, (headlines, bodies, labels) in enumerate(iterable):
             if not i % args.accumulation_steps:
                 optimizer.step()
                 optimizer.zero_grad()
-            logits = model(premises, hypotheses)
+            logits = model(headlines, bodies)
             _, preds = logits.max(dim=-1)
             labels = torch.tensor([LABEL_TO_IDX[l] for l in labels]).cuda()
             acc = (preds == labels).float().mean()
@@ -154,9 +143,9 @@ def main():
             iterable = tqdm(dev_dataloader)
         else:
             iterable = dev_dataloader
-        for premises, hypotheses, labels in iterable:
+        for headlines, bodies, labels in iterable:
             with torch.no_grad():
-                logits = model(premises, hypotheses)
+                logits = model(headlines, bodies)
             _, preds = logits.max(dim=-1)
             labels = torch.tensor([LABEL_TO_IDX[l] for l in labels]).cuda()
             correct += (preds == labels).float().sum()

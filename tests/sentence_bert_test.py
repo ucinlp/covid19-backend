@@ -8,7 +8,8 @@ from backend.ml.sentence_bert import cosine_similarity
 from backend.ml.sentence_bert import SentenceBertBase
 
 
-SMALL_MODEL_IDENTIFIER = "julien-c/bert-xsmall-dummy"
+#SMALL_MODEL_IDENTIFIER = "julien-c/bert-xsmall-dummy"
+SMALL_MODEL_IDENTIFIER = "roberta-base"
 
 
 class CosineSimilarityTest(TestCase):

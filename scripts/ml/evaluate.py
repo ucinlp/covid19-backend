@@ -3,17 +3,18 @@ import argparse
 from pathlib import Path
 import pandas as pd
 import numpy as np
-from backend.ml.misconception import MisconceptionDataset
-from backend.ml.sentence_bert import SentenceBertClassifier
 from backend.stream.db.table import  Output
 from backend.stream.db.util import get_engine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.sql import select
 from sqlalchemy import and_
+import ast
 
-
+##########################
+###### Functions #########
+##########################
 def confusion_matrix(y, y_hat):
-    
+     
     confusion_matrix = torch.zeros(3,3)
             
     for t, p in zip(y, y_hat):
@@ -23,8 +24,7 @@ def confusion_matrix(y, y_hat):
     row_labels = ['True: Pos', 'True: Neg', 'True: N/A']
     column_labels = ['Pred: Pos', 'Pred: Neg', 'Pred: N/A']
     df = pd.DataFrame(confusion_matrix.numpy(), columns=column_labels, index=row_labels)
-    print (df)
-        
+    print (confusion_matrix)
     return confusion_matrix
 
 def accuracy (confusion_matrix: torch.Tensor):    
@@ -59,85 +59,94 @@ def precision_recall_f1(confusion_matrix: torch.Tensor, beta =2):
              
     return class_precision.tolist(), class_recall.tolist(), class_f1.tolist()
 
+def get_annotated_data (db, annotated_data):
+    input_ids = []
+    misinfo_ids = []
+    labels = []
+  
+    engine = get_engine(db)
+    connection = engine.connect()
+    annotated = get_outputs(engine, connection, annotated_data)
 
-def get_pred_ranks (db,model):
-  input_ids = []
+    for a in annotated:
+        input_ids.append (a.input_id)
+        misinfo_ids.append (a.misinfo_id)
+        labels.append (a.label_id)     
+
+    connection.close()
+
+    annotated = pd.DataFrame({'input_id': input_ids, 'gold_label': labels,
+                             'misinfo_id': misinfo_ids })  
+    
+    return annotated
+
+
+def get_preds_db (db, model_name):    
+  #db = 'backend.db'
+  #model_name = 'bow-log-snli'
+  input_id = []
   labels = []
-  ranks = []
+  mid = []
+  confidence = []
+  
+  if model_name in ['bow-log-snli', 'bow-log-mnli', 'boe-log-snli', 'boe-log-mnli', 'boe-log-mednli','bilstm-snli','bilstm-mnli','bilstm-mednli','sbert-snli', 'sbert-mnli', 'sbert-mednli']:
+      pos = []
+      neg =[]
 
   engine = get_engine(db)
   connection = engine.connect()
-  annotated = get_outputs(engine, connection, 'Arjuna')
+  preds = get_outputs(engine, connection, model_name)
 
-  for a in annotated:
-    if ( a.label_id == 0 or a.label_id == 1) :
-        preds = get_outputs(engine, connection, model, a.input_id)
-        misinfo_ids = []
-        pos = [] # logit for positive prediction
-        neg = [] # logit for negative prediction
+  for p in preds:
+        input_id.append (p.input_id)
+        mid.append (p.misinfo_id)
+        labels.append (p.label_id)
+        confidence.append (p.confidence)
         
-        for p in preds:
-            misinfo_ids.append (p.misinfo_id)
-            pos.append (p.misc[0])            
+        if model_name in ['bow-log-snli', 'bow-log-mnli','bow-log-mednli' ,'boe-log-snli', 'boe-log-mnli','boe-log-mednli','bilstm-snli','bilstm-mnli','bilstm-mednli', 'sbert-snli', 'sbert-mnli', 'sbert-mednli']:
+            pos.append (p.misc[0])
             neg.append (p.misc[1])
-        
-        # If true label is positive, then sort by logit for positive prediction
-        # Otherwise sort by logit for negative prediction
-        if a.label_id == 0:
-            scores = pos
-        else:
-            scores = neg
-                
-        zipped = list(zip(misinfo_ids, scores))
-        sort = sorted(zipped, key=lambda x: x[1], reverse = True)
-        
-        # Find rank of misinformation in annotated data        
-        rank = [y[0] for y in sort].index(a.misinfo_id) + 1 
-        ranks.append (rank)
-        labels.append (a.label_id)
-        input_ids.append (a.input_id)
-            
-  connection.close() 
-  rank_df = pd.DataFrame ({ 'input_ids' : input_ids,
-                            'labels' : labels , 
-                            'ranks' : ranks,
-                            'inv_ranks' : [1/r for r in ranks] })
 
-  return rank_df
+  connection.close()
 
+  if model_name in model_name in ['bow-cosine', 'bert-base-cosine', 'bert-ft-cosine', 'ct-bert-cosine', 'bert-score-base', 'bert-score-ft','bert-score-ct','glove-avg-cosine' ]:
+      pred_df = pd.DataFrame({'input_id': input_id, 'model_id': model_name, 'label_id': labels,
+                             'misinfo_id': mid, 'confidence': confidence })
+      pred_df['rank'] = pred_df.groupby('input_id')['confidence'].rank(ascending=False) # Ranks
+  
+  elif model_name in ['bow-log-snli', 'bow-log-mnli','bow-log-mednli', 'boe-log-snli', 'boe-log-mnli','boe-log-mednli','bilstm-snli','bilstm-mnli','bilstm-mednli', 'sbert-snli', 'sbert-mnli','sbert-mednli']:
+      pred_df = pd.DataFrame({'input_id': input_id, 'model_id': model_name, 'label_id': labels,
+                             'misinfo_id': mid, 'confidence': confidence, 'pos_probs' : pos, 'neg_probs' : neg })
+    
+      # Ranks
+      pred_df['pos_rank'] = pred_df.groupby('input_id')['pos_probs'].rank(ascending=False)
+      pred_df['neg_rank'] = pred_df.groupby('input_id')['neg_probs'].rank(ascending=False)
+
+  return pred_df
+
+def get_preds_file (file_name, model_name):    
+  #db = 'backend.db'
+  #model_name = 'bow-log-snli'
+  
+  pred_df = pd.read_csv (file_name,converters={'misc':ast.literal_eval})
+
+  if model_name in model_name in ['bow-cosine', 'bert-base-cosine', 'bert-ft-cosine', 'ct-bert-cosine', 'bert-score-base', 'bert-score-ft','bert-score-ct', 'glove-avg-cosine' ]:      
+      pred_df['rank'] = pred_df.groupby('input_id')['confidence'].rank(ascending=False) # Ranks
+  
+  elif model_name in ['bow-log-snli', 'bow-log-mnli', 'boe-log-snli', 'boe-log-mnli', 'boe-log-mednli','bilstm-snli','bilstm-mnli','bilstm-mednli', 'sbert-snli', 'sbert-mnli','sbert-mednli']:
+      pred_df.loc[:, 'pos_probs'] = pred_df.misc.map(lambda x: x[0])
+      pred_df.loc[:, 'neg_probs'] = pred_df.misc.map(lambda x: x[1])
+      # Ranks
+      pred_df['pos_rank'] = pred_df.groupby('input_id')['pos_probs'].rank(ascending=False)
+      pred_df['neg_rank'] = pred_df.groupby('input_id')['neg_probs'].rank(ascending=False)
+
+  return pred_df
 
 def hits_k(df,k):
-    hits = df[df.ranks <= k].shape[0]
-    total = df.shape[0]
-    
-    return hits/total
+    hits = df[df['rank'] <= k].shape[0]
+    total = df.shape[0]    
+    return round( hits/total*100 , 1 )
 
-def hits_k_range(df, n):
-  k = []
-  overall = []
-  pos = []
-  neg = []
-  for i in range(n):
-    k.append(i+1)
-    overall.append ( hits_k(df, i+1) ) # Overall
-
-    for j in range(2): # By Class
-        cls_df = rank_df[rank_df['labels'] == j]
-        if j == 0:
-          pos.append (hits_k(cls_df, i+1))
-        else :
-          neg.append (hits_k(cls_df, i+1))
-
-  hits_df = pd.DataFrame({'k' : k,
-                          'Overall' : overall,
-                          'Positive' : pos,
-                          'Negative' : neg })
-
-   
-        
-  return hits_df
-
-# Add more cases for possible combinations of inputs
 def get_outputs(engine, connection, model=None, input=None, misinfo=None):
     Output.metadata.create_all(bind=engine, checkfirst=True)
     results = None
@@ -161,80 +170,127 @@ def get_outputs(engine, connection, model=None, input=None, misinfo=None):
 ####################################
 parser = argparse.ArgumentParser()
 parser.add_argument('--db', type=str, required=True)
-parser.add_argument('--model', type=str, required=True)       
+parser.add_argument('--model_name', type=str, required=True)
+parser.add_argument('--file_name', type=Path, required=False)
+parser.add_argument('--eval_data', type=str, required=True) 
 args = parser.parse_args()
 
 ####################################
-###### Load Annotated Data #########
+######### Load  Data ###############
 ####################################
-engine = get_engine(args.db)
-connection = engine.connect()
-annotated = get_outputs(engine, connection, 'Arjuna')
+# Annotated Evaluation Data
+annotated = get_annotated_data(args.db, args.eval_data)
+#annotated = get_annotated_data('backend.db', 'Arjuna')
 
-####################################
-###### Load Predictions ############
-####################################
-y = []
-y_hat = []
-for a in annotated:
-        preds = get_outputs(engine, connection, args.model , a.input_id, a.misinfo_id)
-        y.append (a.label_id)
-        for p in preds:
-            y_hat.append(p.label_id)
-   
-connection.close()
+# Predictions
+if args.file_name:
+    pred_df = get_preds_file(args.file_name, args.model_name)
+    
+else:
+    pred_df = get_preds_db (args.db, args.model_name)
+#pred_df = get_preds ('backend.db', 'bow-log-snli')
+#pred_df = get_preds ('backend.db', 'bow-cosine')
+
+# Combine
+eval_df = annotated.merge (pred_df , left_on = ['input_id', 'misinfo_id'], right_on = ['input_id', 'misinfo_id'] , how = 'left' )
 
 ##################################
 ######## Compute Metrics #########
 ##################################
-# Confusion Matrix
-cm = confusion_matrix(y,y_hat)
+if args.model_name in ['bow-cosine', 'bert-base-cosine', 'bert-ft-cosine', 'ct-bert-cosine', 'bert-score-base', 'bert-score-ft','bert-score-ct','glove-avg-cosine' ]:
+    eval_df = eval_df.assign(inv_rank = lambda x: 1/x['rank'])
+    
+    eval_df = eval_df[eval_df['gold_label'].isin([0, 1])] # Only keep positive or negative true labels
+    pos = eval_df[eval_df['gold_label'] == 0]
 
-##########################
-####### Accuracy #########
-##########################
-acc = accuracy (cm)
-print ('Accuracy : ', round(acc*100,3), '%')
+    # MRR
+    mrr_pos = round ( np.mean(pos.inv_rank) , 2 ) # Postive 
+    mrr_both = round ( np.mean(eval_df.inv_rank) , 2) # Positive and Negative
 
-###########################
-## Precision, Recall, F1 ##
-###########################
-class_precision, class_recall, class_f1 = precision_recall_f1(cm)
+    ### Hits @ K
+    ## Positive
+    pos_h_1 = hits_k(pos,1)
+    pos_h_5 = hits_k(pos,5)
+    pos_h_10 = hits_k(pos,10)
+    ## Postive and Negative
+    both_h_1 = hits_k(eval_df,1)
+    both_h_5 = hits_k(eval_df,5)
+    both_h_10 = hits_k(eval_df,10)
 
-# Print
-print ('--- Positive ---')
-print ('Precision : ', round(class_precision[0]*100,3), '%' )
-print ('Recall : ', round(class_recall[0]*100,3), '%' )
-print ('F1 : ', round(class_f1[0]*100,3), '%', '\n' )
-print ('--- Negative ---')
-print ('Precision : ', round(class_precision[1]*100,3), '%' )
-print ('Recall : ', round(class_recall[1]*100,3), '%' )
-print ('F1 : ', round(class_f1[1]*100,3), '%', '\n' )
-print ('--- Negative ---')
-print ('Precision : ', round(class_precision[2]*100,3), '%' )
-print ('Recall : ', round(class_recall[2]*100,3), '%' )
-print ('F1 : ', round(class_f1[2]*100,3), '%', '\n' )
+    ####################
+    ### Print Output ###
+    ####################
+    print (pos_h_1 , ' & ', pos_h_5 , ' & ', pos_h_10 , ' & ', mrr_pos, ' & ', both_h_1  , ' & ', both_h_5 , ' & ', both_h_10 , ' & ', mrr_both )
 
-##########################
-##### Rank Metrics  ######
-##########################
-# Get Ranks
-rank_df = get_pred_ranks(args.db, args.model)
+elif args.model_name in ['bow-log-snli', 'bow-log-mnli','bow-log-mednli' ,'boe-log-snli', 'boe-log-mnli','boe-log-mednli','bilstm-snli','bilstm-mnli','bilstm-mednli', 'sbert-snli', 'sbert-mnli','sbert-mednli']:
+    
+    #from sklearn.metrics import precision_recall_fscore_support
+    #from sklearn.metrics import accuracy_score
+    
+    #acc = round ( accuracy_score (eval_df.gold_label , eval_df.label_id)*100 , 1 )
+    
+    # Micro
+    #micro = precision_recall_fscore_support (eval_df.gold_label , eval_df.label_id, average= 'micro')
+    #mic_pr = round ( micro[0]*100 ,1 )
+    #mic_re = round ( micro[1]*100 ,1 )
+    #mic_f1 = round ( micro[2]*100 ,1 )
+    
+    # Macro
+    #macro = precision_recall_fscore_support (eval_df.gold_label , eval_df.label_id, average= 'macro')
+    #mac_pr = round ( macro[0]*100 ,1 )
+    #mac_re = round ( macro[1]*100 ,1 )
+    #mac_f1 = round ( macro[2]*100 ,1 )
+    
+    ####################
+    ### Print Output ###
+    ####################
+    #print (acc , ' & ', mic_pr , ' & ', mic_re , ' & ', mic_f1 , ' & ', mac_pr  , ' & ', mac_re , ' & ', mac_f1 )
+    
+     # Create Ranks
+    new_results = {}
+    for index, row in eval_df.iterrows():
+        row['rank'] = row["pos_rank"] if row["gold_label"] == 0 else row["neg_rank"] if row["gold_label"] == 1 else -1
+        new_results[index] = dict(row)
 
-# MRR
-mrr = np.mean(rank_df.inv_ranks)
-print ('MRR : ', mrr)
+    eval_df = pd.DataFrame.from_dict(new_results, orient='index')
+    eval_df = eval_df.assign(inv_rank = lambda x: 1/x['rank'])
+    
+    ### Classification Metrics ###
+    cm = confusion_matrix(eval_df.gold_label , eval_df.label_id)
+    class_precision, class_recall, class_f1 = precision_recall_f1(cm)
+    
+    ## Postive
+    pos_pr = round ( class_precision[0]*100 , 1 )
+    pos_re = round ( class_recall[0]*100 , 1 )
+    pos_f1 = round ( class_f1[0]*100 , 1 )
 
-for i in range(2):
-        df = rank_df[rank_df['labels'] == i]
-        mrr = np.mean(df.inv_ranks)
-        if i == 0:
-          cls = 'Positive'
-        else:
-          cls = 'Negative'        
-        print ('MRR for class =', cls, ' : ', mrr)
+
+    ## Negative
+    neg_pr = round ( class_precision[1]*100 , 1 )
+    neg_re = round ( class_recall[1]*100 , 1  )
+    neg_f1 = round ( class_f1[1]*100 , 1 )
+
+    ## Neutral 
+    na_pr = round ( class_precision[2]*100 , 1 )
+    na_re = round ( class_recall[2]*100 , 1  )
+    na_f1 = round ( class_f1[2]*100 , 1 )
+    
+    # Macro
+    from sklearn.metrics import precision_recall_fscore_support
         
-
-# Hits at K
-hits = hits_k_range(rank_df, 10)
-print (hits)
+    macro = precision_recall_fscore_support (eval_df.gold_label , eval_df.label_id, average= 'macro')
+    mac_pr = round ( macro[0]*100 ,1 )
+    mac_re = round ( macro[1]*100 ,1 )
+    mac_f1 = round ( macro[2]*100 ,1 )
+    
+    # Accuracy
+    from sklearn.metrics import accuracy_score
+    acc = round ( accuracy_score (eval_df.gold_label , eval_df.label_id)*100 , 1 )
+    print (acc)
+    
+    ####################
+    ### Print Output ###
+    ####################
+    print (mac_pr, ' & ', mac_re, ' & ', mac_f1,' & ',  pos_pr  , ' & ', pos_re , ' & ', pos_f1  , ' & ', neg_pr, ' & ', neg_re  , ' & ', neg_f1 , ' & ', na_pr, ' & ', na_re, ' & ', na_f1  )
+    
+    

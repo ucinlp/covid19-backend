@@ -9,8 +9,8 @@ from backend.ml.bertscore import (
 from backend.ml.misconception import MisconceptionDataset
 
 
-SMALL_MODEL_IDENTIFIER = "julien-c/bert-xsmall-dummy"
-
+#SMALL_MODEL_IDENTIFIER = "julien-c/bert-xsmall-dummy"
+SMALL_MODEL_IDENTIFIER = 'roberta-base'
 
 class BertScoreTest(TestCase):
     def test_output_is_correct(self):
