@@ -98,7 +98,7 @@ def main(args):
     batch_size = args.batch_size
     output_root_dir_path = args.output
     for input_dir_path in input_dir_paths:
-        output_dir_path = os.path.join(output_root_dir_path, input_dir_path)
+        output_dir_path = os.path.join(output_root_dir_path, os.path.basename(input_dir_path))
         download_tweet_data(input_dir_path, batch_size, output_dir_path)
 
 
