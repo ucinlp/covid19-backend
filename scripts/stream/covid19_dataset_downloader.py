@@ -81,7 +81,7 @@ def download_tweet_data(input_dir_path, batch_size, output_dir_path):
                 print('{} requests were sent after the interval'.format(request_count))
                 print('Sleeping for 15 min')
                 # With standard APIs, 30 requests / min
-                time.sleep(60.0 * 2)
+                time.sleep(60.0 * 15)
                 request_count = 0
             elif tweet_data == 504:
                 client = OAuth1Session(CONSUMER_KEY, CONSUMER_SECRET, ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
