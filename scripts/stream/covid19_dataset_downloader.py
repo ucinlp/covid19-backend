@@ -19,6 +19,7 @@ ACCESS_TOKEN_SECRET = os.environ.get('TWITTER_ACCESS_TOKEN_SECRET', None)
 def get_argparser():
     parser = argparse.ArgumentParser(description='COVID-19 Tweet dataset downloader')
     parser.add_argument('--input', required=True, type=lambda p: Path(p), help='input root dir path')
+    parser.add_argument('--batch_size', default=100, type=int, help='number of tweets per request')
     parser.add_argument('--output', required=True, type=lambda p: Path(p), help='output root dir path')
     return parser
 
@@ -48,7 +49,7 @@ def send_query(client, ids_str):
     return None
 
 
-def download_tweet_data(input_dir_path, output_dir_path):
+def download_tweet_data(input_dir_path, batch_size, output_dir_path):
     if not os.path.isdir(output_dir_path):
         os.makedirs(output_dir_path)
         print('Created {}'.format(output_dir_path))
@@ -67,7 +68,6 @@ def download_tweet_data(input_dir_path, output_dir_path):
 
         index = 0
         request_count = 0
-        batch_size = 100
         json_list = list()
         print('Processing {}'.format(input_file_path))
         while index < len(tweet_ids):
@@ -80,8 +80,8 @@ def download_tweet_data(input_dir_path, output_dir_path):
             elif tweet_data == 429:
                 print('{} requests were sent after the interval'.format(request_count))
                 print('Sleeping for 15 min')
-                # With standard APIs, 15 requests / 15 min
-                time.sleep(60.0 * 15.5)
+                # With standard APIs, 30 requests / min
+                time.sleep(60.0 * 15)
                 request_count = 0
             elif tweet_data == 504:
                 client = OAuth1Session(CONSUMER_KEY, CONSUMER_SECRET, ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
@@ -95,10 +95,11 @@ def download_tweet_data(input_dir_path, output_dir_path):
 
 def main(args):
     input_dir_paths = get_dir_paths(args.input)
+    batch_size = args.batch_size
     output_root_dir_path = args.output
-    for input_dir_path in input_dir_paths:
-        output_dir_path = os.path.join(output_root_dir_path, input_dir_path)
-        download_tweet_data(input_dir_path, output_dir_path)
+    for input_dir_path in sorted(input_dir_paths):
+        output_dir_path = os.path.join(output_root_dir_path, os.path.basename(input_dir_path))
+        download_tweet_data(input_dir_path, batch_size, output_dir_path)
 
 
 if __name__ == '__main__':
