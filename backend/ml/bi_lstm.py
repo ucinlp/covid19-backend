@@ -1,10 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from overrides import overrides
-from backend.ml.detector import Detector
 
-class BiLSTM(Detector, nn.Module):
+class BiLSTM(nn.Module):
     def __init__(self, 
                  input_dim, 
                  embedding_dim,
@@ -33,9 +31,10 @@ class BiLSTM(Detector, nn.Module):
         self.fc_out = nn.Linear(fc_dim * 2, output_dim)        
         self.dropout = nn.Dropout(dropout)
         self.field = []
-        
+                
     def forward(self, prem, hypo):
-
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        
         prem_seq_len, batch_size = prem.shape
         hypo_seq_len, _ = hypo.shape
         
@@ -61,11 +60,11 @@ class BiLSTM(Detector, nn.Module):
             hidden = F.tanh(hidden)
             hidden = self.dropout(hidden)
         
-        prediction = self.fc_out(hidden).to(device = 'cuda')
+        prediction = self.fc_out(hidden).to(device = device)
                
         return prediction
 
-    @overrides
+    #@overrides
     def _encode (self, sentences):
 
       ## Tokenize

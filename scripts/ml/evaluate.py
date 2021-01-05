@@ -1,15 +1,14 @@
-import argparse
 import ast
+import argparse
 from pathlib import Path
-
 import numpy as np
 import pandas as pd
+import torch
 from sklearn.metrics import precision_recall_fscore_support
 from sklearn.metrics import accuracy_score
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.sql import select
 from sqlalchemy import and_
-import torch
 
 from backend.stream.db.table import Output
 from backend.stream.db.util import get_engine
@@ -24,6 +23,7 @@ SIMILARITY_MODELS = [
     'bert-score-ft',
     'bert-score-ct',
     'glove-avg-cosine',
+    'pyserini'
 ]
 
 STANCE_MODELS = [
@@ -39,6 +39,15 @@ STANCE_MODELS = [
     'sbert-snli',
     'sbert-mnli',
     'sbert-mednli',
+    'sbert-snli-ct',
+    'sbert-mnli-ct',
+    'sbert-mednli-ct',
+    'comb-bilstm-snli',
+    'comb-bilstm-mnli',
+    'comb-bilstm-mednli',
+    'comb-sbert-snli-ct',
+    'comb-sbert-mnli-ct',
+    'comb-sbert-mednli-ct'
 ]
 
 
@@ -147,12 +156,6 @@ def get_preds_db(db, model_name):
         grouped = pred_df.groupby('input_id')
         ranked_confidence = grouped['confidence'].rank(ascending=False)
         pred_df['rank'] = ranked_confidence
-    elif model_name in STANCE_MODELS:
-        pred_df['pos_probs'] = pos
-        pred_df['neg_probs'] = neg
-        pred_df['pos_rank'] = pred_df.groupby('input_id')['pos_probs'].rank(ascending=False)
-        pred_df['neg_rank'] = pred_df.groupby('input_id')['neg_probs'].rank(ascending=False)
-
     return pred_df
 
 
@@ -161,12 +164,6 @@ def get_preds_file(file_name, model_name):
   
     if model_name in model_name in SIMILARITY_MODELS:
         pred_df['rank'] = pred_df.groupby('input_id')['confidence'].rank(ascending=False) # Ranks
-    
-    elif model_name in STANCE_MODELS:
-        pred_df.loc[:, 'pos_probs'] = pred_df.misc.map(lambda x: x[0])
-        pred_df.loc[:, 'neg_probs'] = pred_df.misc.map(lambda x: x[1])
-        pred_df['pos_rank'] = pred_df.groupby('input_id')['pos_probs'].rank(ascending=False)
-        pred_df['neg_rank'] = pred_df.groupby('input_id')['neg_probs'].rank(ascending=False)
   
     return pred_df
 
@@ -244,31 +241,19 @@ def main(args):
         both_h_10 = hits_k(eval_df, 10)
 
         output_string = ' & '.join([
-            pos_h_1,
-            pos_h_5,
-            pos_h_10,
-            pos_mrr,
-            both_h_1,
-            both_h_5,
-            both_h_10,
-            both_mrr,
+            str(pos_h_1),
+            str(pos_h_5),
+            str(pos_h_10),
+            str(pos_mrr),
+            str(both_h_1),
+            str(both_h_5),
+            str(both_h_10),
+            str(both_mrr),
         ])
 
         print(output_string)
 
     elif args.model_name in STANCE_MODELS:
-         # Create Ranks
-        new_results = {}
-        for index, row in eval_df.iterrows():
-            rank = -1
-            if row['gold_label'] == 0:
-                rank = row['pos_rank']
-            elif row['gold_label'] == 1:
-                rank = row['neg_rank']
-            new_results[index] = dict(row)
-
-        eval_df = pd.DataFrame.from_dict(new_results, orient='index')
-        eval_df = eval_df.assign(inv_rank = lambda x: 1/x['rank'])
         
         # Classification Metrics
         cm = confusion_matrix(eval_df.gold_label, eval_df.label_id)
@@ -305,18 +290,18 @@ def main(args):
         
         # Print Output
         output_string = ' & '.join([
-            mac_pr,
-            mac_re,
-            mac_f1,
-            pos_pr,
-            pos_re,
-            pos_f1,
-            neg_pr,
-            neg_re,
-            neg_f1,
-            na_pr,
-            na_re,
-            na_f1
+            str(mac_pr),
+            str(mac_re),
+            str(mac_f1),
+            str(pos_pr),
+            str(pos_re),
+            str(pos_f1),
+            str(neg_pr),
+            str(neg_re),
+            str(neg_f1),
+            str(na_pr),
+            str(na_re),
+            str(na_f1)
         ])
         print(output_string)
     

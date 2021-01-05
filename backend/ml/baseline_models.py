@@ -1,8 +1,5 @@
-"""
-BERTScore-based model
-"""
+import os
 from dataclasses import dataclass
-from typing import List
 import pickle
 import numpy as np
 from overrides import overrides
@@ -13,7 +10,6 @@ from backend.ml.detector import Detector
 from transformers import AutoModel, AutoTokenizer
 import re
 from scipy.sparse import hstack
-import torch.nn as nn
 
 def load_vectorizer (vec_path):
     file = open(vec_path, 'rb')
@@ -157,20 +153,14 @@ class BoWLogistic(Detector):
     TFIDFDetector
 
     """    
-    def __init__(self, train_data) -> None:        
+    def __init__(self, model_dir) -> None:        
         Detector.__init__(self)
-        if train_data == 'snli':
-            self.prem_vectorizer = pickle.load(open('models/bow_log_snli_pvect.pkl', "rb"))
-            self.hyp_vectorizer = pickle.load(open('models/bow_log_snli_mvect.pkl', "rb"))
-            self.logreg = pickle.load(open('models/bow_log_snli.pkl', "rb"))
-        elif train_data == 'mnli':
-            self.prem_vectorizer = pickle.load(open('models/bow_log_mnli_pvect.pkl', "rb"))
-            self.hyp_vectorizer = pickle.load(open('models/bow_log_mnli_mvect.pkl', "rb"))
-            self.logreg = pickle.load(open('models/bow_log_mnli.pkl', "rb"))
-        elif train_data == 'mednli':
-            self.prem_vectorizer = pickle.load(open('models/bow_log_mednli_pvect.pkl', "rb"))
-            self.hyp_vectorizer = pickle.load(open('models/bow_log_mednli_mvect.pkl', "rb"))
-            self.logreg = pickle.load(open('models/bow_log_mednli.pkl', "rb"))
+        path = os.path.join('/',model_dir, 'bow_log_pvect.pkl')        
+        self.prem_vectorizer = pickle.load(open(path, "rb"))
+        path = os.path.join('/',model_dir, 'bow_log_mvect.pkl')
+        self.hyp_vectorizer = pickle.load(open(path, "rb"))
+        path = os.path.join('/',model_dir, 'bow_log.pkl')
+        self.logreg = pickle.load(open(path, "rb"))
         
     @overrides
     def _encode(self, sentences, sent_type):
@@ -195,7 +185,7 @@ class BoELogistic(Detector):
     TFIDFDetector
 
     """    
-    def __init__(self, train_data) -> None:        
+    def __init__(self, model_dir) -> None:        
         Detector.__init__(self)
         self.embeddings_dict = {}
         with open("models/glove.6B.300d.txt", 'r', encoding='utf8') as f:
@@ -205,12 +195,8 @@ class BoELogistic(Detector):
                 vector = np.asarray(values[1:], "float32")
                 self.embeddings_dict[word] = vector
         
-        if train_data == 'snli':
-            self.logreg = pickle.load(open('models/boe_log_snli.pkl', "rb"))
-        elif train_data == 'mnli':
-            self.logreg = pickle.load(open('models/boe_log_mnli.pkl', "rb"))
-        elif train_data == 'mednli':
-            self.logreg = pickle.load(open('models/boe_log_mednli.pkl', "rb"))
+        path = os.path.join('/',model_dir, 'boe_log.pkl') 
+        self.logreg = pickle.load(open(path, "rb"))
         
     @overrides
     def _encode(self, sentences):

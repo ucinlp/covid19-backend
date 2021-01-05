@@ -1,47 +1,29 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Aug 18 20:14:00 2020
-
-@author: taman
-"""
-
-from backend.stream.db.table import  Output
-from backend.stream.db.util import get_engine
+import os
+import dill
+import torch
+import argparse
+import pandas as pd
+from pathlib import Path
+from pyserini.search import SimpleSearcher
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.sql import select
 from sqlalchemy import and_
-import torch
-from backend.ml.bertscore import BertScoreDetector
-import pandas as pd
+
+from backend.stream.db.util import get_engine
 from backend.stream.db.operation import get_inputs, put_outputs
+from backend.stream.db.table import  Output
 from backend.ml.misconception import MisconceptionDataset
-from backend.ml.sentence_bert import SentenceBertClassifier
-import argparse
+from backend.ml.bertscore import BertScoreDetector
 from backend.ml.baseline_models import BoWCosine, GloVeCosine, BERTCosine, BoWLogistic, BoELogistic
-from pathlib import Path
 from backend.ml.bi_lstm import BiLSTM
-from pyserini.search import SimpleSearcher
-####################################
-########### CMD OPTIONS ############
-####################################
-parser = argparse.ArgumentParser()
-parser.add_argument('--model_name', type=str, required=True)
-parser.add_argument('--db_input', type=str, required=True)
-parser.add_argument('--file', type=Path, required=False)
-parser.add_argument('--db_output', type=str,  required=False)
+from backend.ml.sentence_bert import SentenceBertClassifier
 
-args = parser.parse_args()
-model_name = args.model_name
-db_input = args.db_input
 
-###################
-#### Functions ####
-###################
-       
-###################
-#### Functions ####
-###################
-       
+if torch.cuda.is_available():
+    map_location=lambda storage, loc: storage.cuda()
+else:
+    map_location='cpu'
+    
 def load_sbert_model (model_dir, weights):
     """
     Load SentenceBertClassifier
@@ -61,314 +43,371 @@ def load_sbert_model (model_dir, weights):
     return model
 
 def load_bilstm (model_path, tokenizer_path):
-  
-    model = torch.load(model_path)
-    model.field = torch.load (tokenizer_path, pickle_module=dill)
+    model = torch.load(model_path,  map_location=map_location)
+    model.field = torch.load (tokenizer_path, pickle_module=dill, map_location=map_location)
     return model
-def get_outputs(engine, connection, model=None, input=None, misinfo=None):
+
+
+def get_outputs(
+    engine,
+    connection,
+    model=None,
+    input=None,
+    misinfo=None,
+):
     Output.metadata.create_all(bind=engine, checkfirst=True)
     results = None
     try:
         if model is not None:
+            condition = Output.model_id == model
             if input is not None:
-                if misinfo is not None:
-                    results = connection.execute(select([Output]).where(and_(Output.model_id == model, Output.input_id == input, Output.misinfo_id == misinfo)))
-                else: 
-                     results = connection.execute(select([Output]).where(and_(Output.model_id == model, Output.input_id == input)))
-            else:
-                 results = connection.execute(select([Output]).where(Output.model_id == model))
+                condition = and_(condition, Output.input_id == input)
+            if misinfo is not None:
+                condition = and_(condition, Output.model_id == misinfo)
+            results = connection.execute(select([Output]).where(condition))
         else:
             results = connection.execute(select([Output]))
     except SQLAlchemyError as e:
         print(e)
     return results
 
-############################
-##### Load Models ##########
-############################
-if torch.cuda.is_available():
-    map_location=lambda storage, loc: storage.cuda()
-else:
-    map_location='cpu'
+# Classify Agree vs. Disagree for Combined Models
+def classify_agree_disagree(row):
+    if row['rel_label_id'] == 2:
+        val = 2
+    elif row['rel_label_id'] == 3 and row['probs'][0] > row['probs'][1]:
+        val = 0
+    elif row['rel_label_id'] == 3 and row['probs'][1] > row['probs'][0]:
+        val = 1
+    return val
 
-################
-## Similarity ##
-################
-if model_name == 'glove-avg-cosine':
-    model = GloVeCosine()
+sm = torch.nn.Softmax(dim=-1)
 
-elif model_name == 'bert-base-cosine':
-    model = BERTCosine('base')
-    model.model.eval()
-    model.model.cuda()
-
-elif model_name == 'bert-ft-cosine':
-    model = BERTCosine('domain_adapted')
-    model.model.eval()
-    model.model.cuda()
-    
-elif model_name == 'ct-bert-cosine':
-    model = BERTCosine('ct-bert')
-    model.model.eval()
-    model.model.cuda()
-    
-elif model_name == 'bert-score-base':
-  model = BertScoreDetector('bert-large-uncased')
-  model.eval()
-  #model.cuda()
-elif model_name == 'bert-score-ft':
-  model = BertScoreDetector('models/roberta-ckpt/covid-roberta')
-  model.eval()
-  #model.cuda()
-elif model_name == 'bert-score-ct':
-  model = BertScoreDetector('digitalepidemiologylab/covid-twitter-bert')
-  model.eval()
-  #model.cuda()
-################
-## Entailment ##
-################
-# BoW Logistic
-elif model_name == 'bow-log-snli':  
-    model = BoWLogistic('snli')
-    
-elif model_name == 'bow-log-mnli':  
-    model = BoWLogistic('mnli')
-    
-elif model_name == 'bow-log-mednli':  
-    model = BoWLogistic('mednli')
-
-# BoE Logistic
-elif model_name == 'boe-log-snli':  
-    model = BoELogistic('snli')
-    
-elif model_name == 'boe-log-mnli':  
-    model = BoELogistic('mnli')
-    
-elif model_name == 'boe-log-mednli':  
-    model = BoELogistic('mednli')
-
-elif model_name == 'sbert-mnli':    
-    model = load_sbert_model('bert-base-cased', 'models/mnli-sbert-ckpt-1.pt')
-    model.cuda()
-    model.eval()
-    sm = torch.nn.Softmax(dim=-1)
-    
-elif model_name == 'sbert-snli':    
-    model = load_sbert_model('bert-base-cased', 'models/snli-sbert-ckpt-2.pt')
-    model.cuda()
-    model.eval()
-    sm = torch.nn.Softmax(dim=-1)
-
-elif model_name == 'sbert-mednli':   
-  
-    model = load_sbert_model('bert-base-cased', 'models/SBERT-MEDNLI-ckpt-5.pt')
-    model.cuda()
-    model.eval()
-    sm = torch.nn.Softmax(dim=-1)
-
-elif model_name == 'sbert-snli-ct':   
-  
-    model = load_sbert_model('digitalepidemiologylab/covid-twitter-bert', 'models/SBERT-SNLI-ckpt-2.pt')
-
-    model.cuda()
-    model.eval()
-    sm = torch.nn.Softmax(dim=-1)
-
-elif model_name == 'sbert-mnli-ct':   
-  
-    model = load_sbert_model('digitalepidemiologylab/covid-twitter-bert', 'models/SBERT-MNLI-ckpt-2.pt')
-    model.cuda()
-    model.eval()
-    sm = torch.nn.Softmax(dim=-1)
-
-elif model_name == 'sbert-mednli-ct':   
-  
-    model = load_sbert_model('digitalepidemiologylab/covid-twitter-bert', 'models/SBERT-ct-mednli-ckpt-7.pt')
-
-    model.cuda()
-    model.eval()
-    sm = torch.nn.Softmax(dim=-1)
-
-    
-elif model_name == 'bilstm-snli':    
-    model = load_bilstm ('models/bilstm-snli.pt', 'models/bilstm-snli-field.pt' )
-    model.cuda()
-    model.eval()
-    sm = torch.nn.Softmax(dim=-1)
-
-elif model_name == 'bilstm-mnli':    
-    model = load_bilstm ('models/bilstm-mnli.pt', 'models/bilstm-mnli-field.pt' )
-    model.cuda()
-    model.eval()
-    sm = torch.nn.Softmax(dim=-1)
-
-elif model_name == 'bilstm-mednli':    
-    model = load_bilstm ('models/bilstm-mednli.pt', 'models/bilstm-mednli-field.pt' )
-    model.cuda()
-    model.eval()
-    sm = torch.nn.Softmax(dim=-1)
-
-elif model_name == 'bilstm-fnc':    
-    model = load_bilstm ('models/fnc/bilistm-fnc.pt', 'models/fnc/bilstm-fnc-field.pt' )
-    model.cuda()
-    model.eval()
-    sm = torch.nn.Softmax(dim=-1)
-
-
-#############################
-#### Read Misinformation ####
-#############################
-misinfos = MisconceptionDataset.from_db(db_input)
-
-mis = []
-mid = []
-
-for misinfo in misinfos:
-    mis.append(misinfo.pos_variations[0] )
-    mid.append(misinfo.id)
-
-n = len(mid)
-
-# Encode misconception
-if model_name in ['bert-base-cosine', 'bert-ft-cosine', 'ct-bert-cosine', 'bert-score-base', 'bert-score-ft',
-                  'bert-score-ct','glove-avg-cosine', 'boe-log-snli', 'boe-log-mnli', 'boe-log-mednli' ,
-                  'bilstm-snli', 'bilstm-mnli', 'bilstm-mednli']:
-    mis_vect = model._encode (mis)
-
-elif model_name in ['bow-log-snli', 'bow-log-mnli', 'bow-log-mednli']:
-    mx = model._encode (mis, 'hyp')
-      
-#########################
-###### Predict ##########
-#########################
-# Tweets
-engine = get_engine(db_input)
-connection = engine.connect()
-inputs = get_inputs(engine, connection)
-
-#output = pd.DataFrame()
-output = []
-
-for input in inputs:
-    print (input['id'] )
-    posts = [input['text']] * n
-    post_ids = [input['id']] * n
-    
-    ###########################################################
-    ################ SIMILARITY MODELS ########################
-    ###########################################################
-
-    #############################
-    #### Bag of Words Cosine ####
-    #############################
-    if model_name == 'bow-cosine':
-      corpus = mis + [input['text']]
-      model = BoWCosine(corpus)
-      mis_vect = model._encode(mis)      
-
-    ###############################
-    ######## Output ###############
-    ###############################
-    
-    if model_name in ['bow-cosine', 'bert-base-cosine', 'bert-ft-cosine', 'ct-bert-cosine', 'bert-score-base', 'bert-score-ft','bert-score-ct','glove-avg-cosine' ]:
-        post_vect = model._encode([input['text']])
-        score = model._score(post_vect, mis_vect)
-        df = pd.DataFrame({'input_id': post_ids, 'model_id': model_name, 'label_id': 'n/a',
-                             'misinfo_id': mid, 'confidence': score[0] }).to_dict('records')
-    
-    ###########################################################
-    ################ ENTAILMENT MODELS ########################
-    ###########################################################
-    
-    ###########################################
-    ######### BOW - Logistic ##################
-    ###########################################
-    if model_name in ['bow-log-snli', 'bow-log-mnli', 'bow-log-mednli']:
-        px = model._encode(posts, 'prem')
-     
-        preds, probs = model._predict(px,mx)    
-        max_probs = probs.max(axis =1)            
+def main():
        
-    ################################################
-    ############ BOE - Logistic ####################
-    ################################################
-    elif model_name in ['boe-log-snli', 'boe-log-mnli', 'boe-log-mednli']:
-        post_vect = model._encode([input['text']]) * n
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--model_name', type=str, required=True)
+    parser.add_argument('--model_dir', type=Path) #Required for entailment models and pyserini retrieval
+    parser.add_argument('--db_input', type=str, required=True)
+    parser.add_argument('--file', type=Path, required=False)
+    parser.add_argument('--db_output', type=str,  required=False)
+    
+    args = parser.parse_args()
+    model_name = args.model_name
+    db_input = args.db_input
+    
+    #Similarity
+    if model_name == 'glove-avg-cosine':
+        model = GloVeCosine()
+    
+    if model_name == 'bert-base-cosine':
+        model = BERTCosine('base')
+        model.model.eval()
+        #model.model.cuda()
+    
+    if model_name == 'bert-ft-cosine':
+        model = BERTCosine('domain_adapted')
+        model.model.eval()
+        #model.model.cuda()
         
-        preds, probs = model._predict(post_vect, mis_vect)    
-        max_probs = probs.max(axis =1) 
-    
-    ################################################
-    ################## BiLSTM ######################
-    ################################################
-    elif model_name in ['bilstm-snli', 'bilstm-mnli', 'bilstm-mednli', 'bilstm-fnc']:
-        post_vect = model._encode([input['text']]* n) 
-        with torch.no_grad():
-            logits = model(post_vect, mis_vect)  
-            probs = sm(logits)
-            max = probs.max(dim=-1)
-            max_probs = max[0].tolist()
-            preds = max[1].tolist()
-              
-    ################################################
-    ############## Sentence BERT ###################
-    ################################################
-    elif model_name in ['sbert-snli', 'sbert-mnli', 'sbert-mednli', 'sbert-mednli-ct', 'sbert-mnli-ct', 'sbert-snli-ct']:
-        with torch.no_grad():
-            logits = model(posts, mis)           
-            _, preds = logits.max(dim=-1)                        
-            probs = sm(logits)
-            max_probs, _ = probs.max(dim=-1)
-    
-    ###############################
-    ######## Output ###############
-    ###############################
-    
-    if model_name in ['bow-cosine', 'bert-base-cosine', 'bert-ft-cosine', 'ct-bert-cosine', 'bert-score-base', 'bert-score-ft','bert-score-ct', 'glove-avg-cosine' ]:
-        df = pd.DataFrame({'input_id': post_ids, 'model_id': model_name, 'label_id': 'n/a',
-                             'misinfo_id': mid, 'confidence': score[0] }).to_dict('records')    
-    
-    elif model_name in ['bow-log-snli', 'bow-log-mnli','bow-log-mednli', 'boe-log-snli', 'boe-log-mnli','boe-log-mednli', 'bilstm-snli', 'bilstm-mnli', 'bilstm-mednli']:
+    if model_name == 'ct-bert-cosine':
+        model = BERTCosine('ct-bert')
+        model.model.eval()
+        #model.model.cuda()
         
-        df = pd.DataFrame({'input_id': post_ids, 'model_id': model_name, 'label_id': preds,
-                             'misinfo_id': mid, 'confidence': max_probs, 'misc' : probs.tolist()}).to_dict('records')
+    if model_name == 'bert-score-base':
+      model = BertScoreDetector('bert-large-uncased')
 
-    elif model_name in ['sbert-snli', 'sbert-mnli', 'sbert-mednli', 'sbert-mednli-ct', 'sbert-snli-ct', 'sbert-mnli-ct']:
-        df = pd.DataFrame({'input_id': post_ids, 'model_id': model_name, 'label_id': preds.tolist(),
-                             'misinfo_id': mid, 'confidence': max_probs.tolist(), 'misc': probs.tolist() }).to_dict('records')
+    if model_name == 'bert-score-ft':
+      model = BertScoreDetector('models/roberta-ckpt/covid-roberta')
 
-    output.append (df)
-
-connection.close()
-
-
-#############################################
-####### Write Predictions to File ###########
-#############################################
-if args.file:
-    output_df = pd.DataFrame()
-
-    for o in output:
-        df = pd.DataFrame.from_records(o)  
-        output_df = pd.concat([output_df, df], ignore_index=True)
-  
-    output_df.to_csv (args.file)
-    
-    print ('Writing predictions to file is complete...')
-
-###########################################
-####### Write Predictions to DB ###########
-###########################################  
-if args.db_output:
-    engine = get_engine(args.db_output)
-    connection = engine.connect()
-
-    for i in range(len(output)):
-        print ('Writing to DB:', i)
-        put_outputs(output[i], engine)
-
-    connection.close()
-    print ('Writing predictions to DB is complete...')
-
-
+    if model_name in ['bert-score-ct','comb-bilstm-snli', 'comb-bilstm-mnli',
+                      'comb-bilstm-mednli', 'comb-sbert-snli-ct', 'comb-sbert-mnli-ct',
+                      'comb-sbert-mednli-ct' ]:
+      model = BertScoreDetector('digitalepidemiologylab/covid-twitter-bert')
       
+    if model_name == 'pyserini':
+        model_dir = str(args.model_dir)
+        searcher = SimpleSearcher(model_dir)
+
+    #Entailment
+    # BoW Logistic
+    if model_name in ['bow-log-snli', 'bow-log-mnli', 'bow-log-mednli']:  
+        model = BoWLogistic(args.model_dir)
+        
+    # BoE Logistic
+    if model_name in ['boe-log-snli', 'boe-log-mnli', 'boe-log-mednli']:
+        model = BoELogistic(args.model_dir)        
+     
+    if model_name == 'sbert-mnli':
+        model_path = os.path.join('/', args.model_dir, 'mnli-sbert-ckpt-1.pt')
+        model = load_sbert_model('bert-base-cased', model_path)
+        
+    if model_name == 'sbert-snli':
+        model_path = os.path.join('/', args.model_dir, 'snli-sbert-ckpt-2.pt')
+        model = load_sbert_model('bert-base-cased', model_path)
+    
+    if model_name == 'sbert-mednli':   
+        model_path = os.path.join('/', args.model_dir, 'mednli-sbert-ckpt-5.pt')  
+        model = load_sbert_model('bert-base-cased', model_path)
+    
+    if model_name in ['sbert-snli-ct', 'comb-sbert-snli-ct']:   
+        model_path = os.path.join('/', args.model_dir, 'snli-sbert-ct-ckpt-5.pt')
+        if model_name == 'sbert-snli-ct':
+            model = load_sbert_model('digitalepidemiologylab/covid-twitter-bert', model_path)  
+        elif model_name == 'comb-sbert-snli-ct':
+            model2 = load_sbert_model('digitalepidemiologylab/covid-twitter-bert', model_path)    
+    
+    if model_name in ['sbert-mnli-ct', 'comb-sbert-mnli-ct']:   
+        model_path = os.path.join('/', args.model_dir, 'mnli-sbert-ct-ckpt-2.pt')
+        if model_name == 'sbert-mnli-ct':
+            model = load_sbert_model('digitalepidemiologylab/covid-twitter-bert', model_path)
+        elif model_name == 'comb-sbert-mnli-ct':
+            model2 = load_sbert_model('digitalepidemiologylab/covid-twitter-bert', model_path)
+    
+    if model_name in ['sbert-mednli-ct', 'comb-sbert-mednli-ct'] :   
+        model_path = os.path.join('/', args.model_dir, 'mednli-sbert-ct-ckpt-7.pt')
+        if model_name == 'sbert-mednli-ct':
+            model = load_sbert_model('digitalepidemiologylab/covid-twitter-bert', model_path)    
+        elif model_name == 'comb-sbert-mednli-ct':
+            model2 = load_sbert_model('digitalepidemiologylab/covid-twitter-bert', model_path)    
+            
+    if model_name in ['bilstm-snli', 'bilstm-mnli', 'bilstm-mednli', 
+                      'comb-bilstm-snli', 'comb-bilstm-mnli', 'comb-bilstm-mednli' ]:
+        model_path = os.path.join('/', args.model_dir, 'bilstm.pt')
+        field_path = os.path.join('/', args.model_dir, 'bilstm-field.pt')
+        if model_name in ['bilstm-snli', 'bilstm-mnli', 'bilstm-mednli']:
+            model = load_bilstm (model_path, field_path )
+        elif model_name in ['comb-bilstm-snli', 'comb-bilstm-mnli', 'comb-bilstm-mednli']:
+            model2 = load_bilstm (model_path, field_path )
+        
+    if model_name in ['bert-score-base', 'bert-score-ft', 'bert-score-ct','bilstm-snli', 'bilstm-mnli',
+                      'bilstm-mednli', 'sbert-snli-ct', 'sbert-mnli-ct', 'comb-bilstm-snli', 
+                      'comb-bilstm-mnli', 'comb-bilstm-mednli', 'comb-sbert-snli-ct', 
+                      'comb-sbert-mnli-ct', 'comb-sbert-mednli-ct']:
+        model.eval()
+        if torch.cuda.is_available():
+            model.cuda()
+        
+        if model_name in ['comb-bilstm-snli', 'comb-bilstm-mnli', 'comb-bilstm-mednli', 
+                          'comb-sbert-snli-ct', 'comb-sbert-mnli-ct', 'comb-sbert-mednli-ct' ]: 
+            model2.eval()
+            if torch.cuda.is_available():
+                model2.cuda()
+    
+    #Read misinformation
+    misinfos = MisconceptionDataset.from_db(db_input)    
+    mis = []
+    mid = []    
+    for misinfo in misinfos:
+        mis.append(misinfo.pos_variations[0] )
+        mid.append(misinfo.id)    
+    n = len(mid)    
+    # Encode misconception
+    if model_name in ['bert-base-cosine', 'bert-ft-cosine', 'ct-bert-cosine', 
+                      'bert-score-base', 'bert-score-ft','bert-score-ct',
+                      'glove-avg-cosine', 'boe-log-snli', 'boe-log-mnli', 
+                      'boe-log-mednli' ,'bilstm-snli', 'bilstm-mnli', 'bilstm-mednli', 
+                      'comb-bilstm-snli', 'comb-bilstm-mnli', 'comb-bilstm-mednli',
+                      'comb-sbert-snli-ct', 'comb-sbert-mnli-ct', 'comb-sbert-mednli-ct']:
+        mis_vect = model._encode (mis)
+    
+    elif model_name in ['bow-log-snli', 'bow-log-mnli', 'bow-log-mednli']:
+        mx = model._encode (mis, 'hyp')
+          
+    #Predict
+    # Tweets
+    engine = get_engine(db_input)
+    connection = engine.connect()
+    inputs = get_inputs(engine, connection)
+    
+    output = []
+    
+    for input in inputs:
+        print (input['id'] )
+        posts = [input['text']] * n
+        post_ids = [input['id']] * n
+        
+        #Similarity Models
+        #BoW Cosine
+        if model_name == 'bow-cosine':
+          corpus = mis + [input['text']]
+          model = BoWCosine(corpus)
+          mis_vect = model._encode(mis)      
+        
+        if model_name in ['bow-cosine', 'bert-base-cosine', 'bert-ft-cosine', 
+                          'ct-bert-cosine', 'bert-score-base', 'bert-score-ft',
+                          'bert-score-ct','glove-avg-cosine' ]:
+            post_vect = model._encode([input['text']])
+            score = model._score(post_vect, mis_vect)
+            df = pd.DataFrame({'input_id': post_ids, 
+                               'model_id': model_name, 
+                               'label_id': 'n/a',
+                               'misinfo_id': mid, 
+                               'confidence': score[0] }).to_dict('records')
+    
+        if model_name == 'pyserini':
+            hits = searcher.search(input['text'], k = 86)
+    
+            mid2 = []
+            score = []
+            # Print the first 10 hits:
+            for i in range(0, len(hits)):
+                mid2.append (int (hits[i].docid) )
+                score.append (hits[i].score)
+            
+        
+            missed = set(mid)-set (mid2)
+            missed = list( missed )
+        
+            for m in missed:
+                mid2.append(m)
+                score.append (0)
+             
+            df = pd.DataFrame({'input_id': post_ids, 
+                               'model_id': model_name, 
+                               'label_id': 'n/a',
+                               'misinfo_id': mid2, 
+                               'confidence': score}).to_dict('records')
+        
+        #Entailment Models
+        #BoW Logistic
+        if model_name in ['bow-log-snli', 'bow-log-mnli', 'bow-log-mednli']:
+            px = model._encode(posts, 'prem')         
+            preds, probs = model._predict(px,mx)    
+            max_probs = probs.max(axis =1)            
+           
+        #Boe Logistic
+        if model_name in ['boe-log-snli', 'boe-log-mnli', 'boe-log-mednli']:
+            post_vect = model._encode([input['text']]) * n
+            
+            preds, probs = model._predict(post_vect, mis_vect)    
+            max_probs = probs.max(axis =1) 
+        
+        #BiLSTM
+        if model_name in ['bilstm-snli', 'bilstm-mnli', 'bilstm-mednli', 'bilstm-fnc']:
+            post_vect = model._encode([input['text']]* n) 
+            with torch.no_grad():
+                logits = model(post_vect, mis_vect)  
+                probs = sm(logits)
+                max = probs.max(dim=-1)
+                max_probs = max[0].tolist()
+                preds = max[1].tolist()
+                  
+        #SBERT
+        if model_name in ['sbert-snli', 'sbert-mnli', 'sbert-mednli', 
+                          'sbert-mednli-ct', 'sbert-mnli-ct', 'sbert-snli-ct']:
+            with torch.no_grad():
+                logits = model(posts, mis)           
+                _, preds = logits.max(dim=-1)                        
+                probs = sm(logits)
+                max_probs, _ = probs.max(dim=-1)
+        
+        #Stacked # BiLSTM and SBERT
+        if model_name in ['comb-bilstm-snli', 'comb-bilstm-mnli', 'comb-bilstm-mednli', 
+                          'comb-sbert-snli-ct', 'comb-sbert-mnli-ct', 'comb-sbert-mednli-ct']:
+          ## BertScore-DA
+          post_vect = model._encode([input['text']])
+          score = model._score(post_vect, mis_vect)
+          bert_score = score[0]
+    
+          ## Relevance Classification
+          rel_preds = [ 3 if x >= 0.4 else 2 for x in bert_score ]
+          df = pd.DataFrame({'input_id': post_ids, 
+                             'input': posts,
+                             'model_id': model_name, 
+                             'rel_label_id': rel_preds,
+                             'misinfo' : mis, 
+                             'misinfo_id': mid, 
+                             'confidence': bert_score})
+          
+          ## Agree/Disagree Classification
+          relevant = df[df.rel_label_id ==3]
+          
+          if relevant.shape[0] > 0: 
+            post = relevant.input.tolist()
+            misinfo = relevant.misinfo.tolist()  
+              
+            if model_name in ['comb-bilstm-snli', 'comb-bilstm-mnli', 'comb-bilstm-mednli']:
+                  post = model2._encode(post)
+                  misinfo = model2._encode(misinfo)
+
+            with torch.no_grad():
+              logits = model2(post, misinfo) 
+              probs = sm(logits)
+              relevant['probs'] = probs.tolist()
+    
+              relevant = relevant[['input_id', 'misinfo_id', 'probs']] 
+              df = df.merge (relevant, 
+                             how = 'left', 
+                             left_on = ['input_id', 'misinfo_id'], 
+                             right_on = ['input_id', 'misinfo_id'])
+
+              df['label_id'] = df.apply(classify_agree_disagree, axis=1)
+    
+          else:
+            df['label_id'] = df['rel_label_id']
+          
+          df = df[['input_id', 'model_id', 'label_id', 'misinfo_id', 'confidence']].to_dict('records')
+        
+        #Output        
+        if model_name in ['bow-cosine', 'bert-base-cosine', 'bert-ft-cosine', 
+                          'ct-bert-cosine', 'bert-score-base', 
+                          'bert-score-ft','bert-score-ct', 
+                          'glove-avg-cosine' ]:
+            df = pd.DataFrame({'input_id': post_ids, 
+                               'model_id': model_name, 
+                               'label_id': 'n/a',
+                               'misinfo_id': mid, 
+                               'confidence': score[0] }).to_dict('records')    
+        
+        elif model_name in ['bow-log-snli', 'bow-log-mnli','bow-log-mednli', 
+                            'boe-log-snli', 'boe-log-mnli','boe-log-mednli', 
+                            'bilstm-snli', 'bilstm-mnli', 'bilstm-mednli']:
+            
+            df = pd.DataFrame({'input_id': post_ids, 
+                               'model_id': model_name, 
+                               'label_id': preds,
+                               'misinfo_id': mid, 
+                               'confidence': max_probs, 
+                               'misc' : probs.tolist()}).to_dict('records')
+    
+        elif model_name in ['sbert-snli', 'sbert-mnli', 'sbert-mednli', 
+                            'sbert-mednli-ct', 'sbert-snli-ct', 'sbert-mnli-ct']:
+            df = pd.DataFrame({'input_id': post_ids, 
+                               'model_id': model_name, 
+                               'label_id': preds.tolist(),
+                               'misinfo_id': mid, 
+                               'confidence': max_probs.tolist(), 'misc': probs.tolist() }).to_dict('records')
+    
+        output.append (df)
+    
+    connection.close()    
+    
+    #Write to File
+    if args.file:
+        output_df = pd.DataFrame()
+    
+        for o in output:
+            df = pd.DataFrame.from_records(o)  
+            output_df = pd.concat([output_df, df], ignore_index=True)
+      
+        output_df.to_csv (args.file)
+        
+        print ('Writing predictions to file is complete...')
+    
+    #Write to DB
+    if args.db_output:
+        engine = get_engine(args.db_output)
+        connection = engine.connect()
+    
+        for i in range(len(output)):
+            print ('Writing to DB:', i)
+            put_outputs(output[i], engine)
+    
+        connection.close()
+        print ('Writing predictions to DB is complete...')
+
+
+if __name__ == '__main__':
+    main()     
