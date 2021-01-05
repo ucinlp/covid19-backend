@@ -87,10 +87,12 @@ def download_tweet_data(input_dir_path, batch_size, output_dir_path):
                 json_list.extend(tweet_data)
                 index += batch_size
             elif tweet_data == 429:
+                num_tweets = len(json_list)
                 write_jsonl_file(json_list, output_file_path, first=first)
                 json_list.clear()
                 first = False
-                print('{} requests were sent after the interval'.format(request_count))
+                print('{} requests were sent & {} tweets were downloaded '
+                      'after the interval'.format(request_count, num_tweets))
                 print('Sleeping for 1 min')
                 # With standard APIs, 30 requests / min
                 time.sleep(60.0)
