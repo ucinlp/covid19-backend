@@ -71,7 +71,7 @@ python3 -m scripts.csv2db --input merged.csv --tables Input Output --custom old_
 Note,
 * `merged.csv` consists of 7 columns in the following order with no headers: Random number 1, Misconception ID , Misconception, Tweet, Random Number 2, Annotated Label, Tweet ID
 
-## Training
+## Train
 
 #### Logistic Regression - Bag of Words
 ```
@@ -97,7 +97,7 @@ python3 scripts.ml.train_nli --model-name digitalepidemiologylab/covid-twitter-b
 
 ```
 
-## Prediction
+## Predict
 ```
 python3 scripts.ml.predict --model_name MODEL_NAME --model_dir PATH\TO\MODEL --db_input backend.db --file PATH\TO\SAVE\PREDICTIONS.csv
 ```
