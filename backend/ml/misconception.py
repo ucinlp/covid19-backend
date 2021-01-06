@@ -7,6 +7,8 @@ from io import StringIO
 import json
 from typing import Tuple
 
+from backend.stream.db.operation import get_misinfo
+from backend.stream.db.util import get_engine
 
 def _tuplify(x):
     """Converts lists to tuples."""
@@ -69,3 +71,33 @@ class MisconceptionDataset:
         digest = md5_hash.digest()
         uid = int.from_bytes(digest, byteorder='big')
         return cls(misconceptions, sentences, uid)
+    
+    @classmethod
+    def from_db(cls, db_file_path: StringIO):
+        misconceptions = []
+        sentences = []
+        md5_hash = md5()
+        
+        engine = get_engine(db_file_path)
+        connection = engine.connect()
+        
+        misinfos = get_misinfo(engine, connection)
+        
+        for misinfo in misinfos:
+            md5_hash.update(misinfo['misc'].encode('utf-8'))
+            obj = json.loads(misinfo['misc'])
+            immutable_obj = {k: _tuplify(v) for k, v in obj.items()}
+            misconception = Misconception(misinfo['id'], misinfo['text'], misinfo['url'], immutable_obj['category'],immutable_obj['pos_variations'],immutable_obj['neg_variations'], immutable_obj['reliability_score'],misinfo['source'])
+            
+            if misconception.pos_variations:
+                misconceptions.append(misconception)
+            for sentence in misconception.pos_variations:                
+                sentences.append(sentence)
+        misconceptions = tuple(misconceptions)
+        sentences = tuple(sentences)
+        digest = md5_hash.digest()
+        uid = int.from_bytes(digest, byteorder='big')
+        connection.close()        
+        return cls(misconceptions, sentences, uid)
+    
+    

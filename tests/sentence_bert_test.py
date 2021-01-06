@@ -5,10 +5,11 @@ import torch
 
 from backend.ml.misconception import MisconceptionDataset
 from backend.ml.sentence_bert import cosine_similarity
-from backend.ml.sentence_bert import SentenceBertDetector
+from backend.ml.sentence_bert import SentenceBertBase
 
 
-SMALL_MODEL_IDENTIFIER = "julien-c/bert-xsmall-dummy"
+#SMALL_MODEL_IDENTIFIER = "julien-c/bert-xsmall-dummy"
+SMALL_MODEL_IDENTIFIER = "roberta-base"
 
 
 class CosineSimilarityTest(TestCase):
@@ -26,9 +27,9 @@ class CosineSimilarityTest(TestCase):
         assert torch.allclose(score, expected_score)
 
 
-class SentenceBertDetectorTest(TestCase):
+class SentenceBertBaseTest(TestCase):
     def setUp(self):
-        self.detector = SentenceBertDetector(SMALL_MODEL_IDENTIFIER)
+        self.detector = SentenceBertBase(SMALL_MODEL_IDENTIFIER)
 
     def test_scores_not_affected_by_padding(self):
         with open('tests/fixtures/misconceptions.jsonl', 'r') as f:

@@ -116,3 +116,4 @@ def get_table_class(cls_name):
     if cls_name not in TABLE_CLASS_DICT:
         raise KeyError('cls_name `{}` is not expected'.format(cls_name))
     return TABLE_CLASS_DICT[cls_name]
+
