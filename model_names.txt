@@ -1,0 +1,40 @@
+RETRIEVAL
+
+Cosine Sim., TF-IDF : bow-cosine
+BM25 : 	pyserini
+Cosine Sim., Avg. GloVe : glove-avg-cosine
+Cosine Sim., Avg. BERT Embeds. : bert-base-cosine
+BERTScore : bert-score-base
+
+with Domain Adaptation (DA):
+Cosine Sim., Avg. BERT Embeds. : ct-bert-cosine
+BERTScore : bert-score-ct
+
+STANCE DETECTION
+
+Trained on SNLI: 
+Linear, Bag-of-Words : bow-log-snli
+Linear, Avg. GloVe Emebds : boe-log-snli
+BiLSTM : bilstm-snli
+SBERT : sbert-snli
+SBERT (DA) : sbert-snli-ct
+BERTScore (DA) + BiLSTM : comb-bilstm-snli
+BERTScore (DA) + SBERT : comb-sbert-snli-ct
+
+Trained on MNLI: 
+Linear, Bag-of-Words : bow-log-mnli
+Linear, Avg. GloVe Emebds : boe-log-mnli
+BiLSTM : bilstm-mnli
+SBERT : sbert-mnli
+SBERT (DA) : sbert-mnli-ct
+BERTScore (DA) + BiLSTM : comb-bilstm-mnli
+BERTScore (DA) + SBERT : comb-sbert-mnli-ct
+
+Trained on MedNLI: 
+Linear, Bag-of-Words : bow-log-mednli
+Linear, Avg. GloVe Emebds : boe-log-mednli
+BiLSTM : bilstm-mednli
+SBERT : sbert-mednli
+SBERT (DA) : sbert-mednli-ct
+BERTScore (DA) + BiLSTM : comb-bilstm-mednli
+BERTScore (DA) + SBERT : comb-sbert-mednli-ct

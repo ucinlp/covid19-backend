@@ -67,3 +67,50 @@ python3 -m scripts.jsonl2db --input misconceptions.jsonl --table Misinformation 
 # Note: merged.csv is not available on the repository as it contains tweet texts
 python3 -m scripts.csv2db --input merged.csv --tables Input Output --custom old_csv_format --db backend.db
 ```
+
+Note,
+* `merged.csv` consists of 7 columns in the following order with no headers: Random number 1, Misconception ID , Misconception, Tweet, Random Number 2, Annotated Label, Tweet ID
+
+## Training
+```
+#### Logistic Regression - BoW
+```
+python3 -m scripts.ml.train_logreg --train path\to\train_data.jsonl --dev path\to\dev_data.jsonl --output-dir path\to\save\model -- c <INT> --feature-type bow
+```
+#### Logistic Regression - BoE
+```
+python3 -m scripts.ml.train_logreg --train path\to\train_data.jsonl --dev path\to\dev_data.jsonl --output-dir path\to\save\model --c <INT> --feature-type boe
+```
+Note, use value of C which provides highest development set accuracy
+
+#### BiLSTM
+```
+python3 -m scripts.ml.train_bilstm --train path\to\train_data.jsonl --dev path\to\dev_data.jsonl --output-dir path\to\save\model --epochs 20
+```
+#### SBERT
+```
+python3 scripts.ml.train_nli --model-name bert-base-cased --batch_size=10 --epochs=10 --lr=5e-5 --accumulation_steps 32 --train path\to\train_data.jsonl --dev path\to\dev_data.jsonl --ckpt ckpt_name
+```
+#### SBERT - DA
+```
+python3 scripts.ml.train_nli --model-name digitalepidemiologylab/covid-twitter-bert --batch_size=10 --epochs=10 --lr=5e-5 --accumulation_steps 32 --train path\to\train_data.jsonl --dev path\to\dev_data.jsonl --ckpt ckpt_name
+
+```
+
+## Prediction
+```
+python3 scripts.ml.predict --model_name MODEL_NAME --model_dir PATH\TO\MODEL --db_input backend.db --file PATH\TO\SAVE\PREDICTIONS.csv
+```
+
+Note,
+* `MODEL_NAME` for each model can be found in `model_names.txt`
+* Predictions can be written to `.csv` file and/or `DB`. Include `--output_dir backend.db` to write predictions to DB.
+
+## Evaluate
+
+```
+python3 scripts.ml.evaluate --db backend.db --model_name MODEL_NAME --eval_data Arjuna --file_name PATH\TO\PREDICTIONS.csv
+```
+Note,
+* `MODEL_NAME` for each model can be found in `model_names.txt`
+* Predictions can be read from `.csv` or `DB`. If `--file_name` not provided then will read predictions for given `MODEL_NAME` from `DB`
