@@ -72,7 +72,7 @@ Note,
 * `merged.csv` consists of 7 columns in the following order with no headers: Random number 1, Misconception ID , Misconception, Tweet, Random Number 2, Annotated Label, Tweet ID
 
 ## Training
-```
+
 #### Logistic Regression - BoW
 ```
 python3 -m scripts.ml.train_logreg --train path\to\train_data.jsonl --dev path\to\dev_data.jsonl --output-dir path\to\save\model -- c <INT> --feature-type bow
