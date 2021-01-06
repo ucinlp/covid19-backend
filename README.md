@@ -73,27 +73,27 @@ Note,
 
 ## Training
 
-#### Logistic Regression - BoW
+#### Logistic Regression - Bag of Words
 ```
-python3 -m scripts.ml.train_logreg --train path\to\train_data.jsonl --dev path\to\dev_data.jsonl --output-dir path\to\save\model -- c <INT> --feature-type bow
+python3 -m scripts.ml.train_logreg --train PATH\TO\TRAIN_DATA.jsonl --dev PATH\TO\DEV_DATA.jsonl --output-dir PATH\TO\SAVE\MODEL -- c <INT> --feature-type bow
 ```
-#### Logistic Regression - BoE
+#### Logistic Regression - Avg. GloVE Emebeddings
 ```
-python3 -m scripts.ml.train_logreg --train path\to\train_data.jsonl --dev path\to\dev_data.jsonl --output-dir path\to\save\model --c <INT> --feature-type boe
+python3 -m scripts.ml.train_logreg --train PATH\TO\TRAIN_DATA.jsonl --dev PATH\TO\DEV_DATA.jsonl --output-dir PATH\TO\SAVE\MODEL --c <INT> --feature-type boe
 ```
 Note, use value of C which provides highest development set accuracy
 
 #### BiLSTM
 ```
-python3 -m scripts.ml.train_bilstm --train path\to\train_data.jsonl --dev path\to\dev_data.jsonl --output-dir path\to\save\model --epochs 20
+python3 -m scripts.ml.train_bilstm --train PATH\TO\TRAIN_DATA.jsonl --dev PATH\TO\DEV_DATA.jsonl --output-dir PATH\TO\SAVE\MODEL --epochs 20
 ```
 #### SBERT
 ```
-python3 scripts.ml.train_nli --model-name bert-base-cased --batch_size=10 --epochs=10 --lr=5e-5 --accumulation_steps 32 --train path\to\train_data.jsonl --dev path\to\dev_data.jsonl --ckpt ckpt_name
+python3 scripts.ml.train_nli --model-name bert-base-cased --batch_size=10 --epochs=10 --lr=5e-5 --accumulation_steps 32 --train PATH\TO\TRAIN_DATA.jsonl --dev PATH\TO\DEV_DATA.jsonl --ckpt CKPT_NAME
 ```
 #### SBERT - DA
 ```
-python3 scripts.ml.train_nli --model-name digitalepidemiologylab/covid-twitter-bert --batch_size=10 --epochs=10 --lr=5e-5 --accumulation_steps 32 --train path\to\train_data.jsonl --dev path\to\dev_data.jsonl --ckpt ckpt_name
+python3 scripts.ml.train_nli --model-name digitalepidemiologylab/covid-twitter-bert --batch_size=10 --epochs=10 --lr=5e-5 --accumulation_steps 32 --train PATH\TO\TRAIN_DATA.jsonl --dev PATH\TO\DEV_DATA.jsonl --ckpt CKPT_NAME
 
 ```
 
