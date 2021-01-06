@@ -49,6 +49,14 @@ def send_query(client, ids_str):
     return None
 
 
+def write_jsonl_file(json_list, output_file_path, first=True):
+    write_mode = 'w' if first else 'a'
+    if len(json_list) > 0:
+        with open(output_file_path, write_mode) as fp:
+            for json_obj in json_list:
+                fp.write('{}\n'.format(json.dumps(json_obj)))
+
+
 def download_tweet_data(input_dir_path, batch_size, output_dir_path):
     if not os.path.isdir(output_dir_path):
         os.makedirs(output_dir_path)
@@ -69,6 +77,7 @@ def download_tweet_data(input_dir_path, batch_size, output_dir_path):
         index = 0
         request_count = 0
         json_list = list()
+        first = True
         print('Processing {}'.format(input_file_path))
         while index < len(tweet_ids):
             ids_str = ','.join(tweet_ids[index: index + batch_size])
@@ -78,19 +87,21 @@ def download_tweet_data(input_dir_path, batch_size, output_dir_path):
                 json_list.extend(tweet_data)
                 index += batch_size
             elif tweet_data == 429:
-                print('{} requests were sent after the interval'.format(request_count))
-                print('Sleeping for 15 min')
+                num_tweets = len(json_list)
+                write_jsonl_file(json_list, output_file_path, first=first)
+                json_list.clear()
+                first = False
+                print('{} requests were sent & {} tweets were downloaded '
+                      'after the interval'.format(request_count, num_tweets))
+                print('Sleeping for 1 min')
                 # With standard APIs, 30 requests / min
-                time.sleep(60.0 * 15)
+                time.sleep(60.0)
                 request_count = 0
             elif tweet_data == 504:
                 client = OAuth1Session(CONSUMER_KEY, CONSUMER_SECRET, ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
             else:
                 print('Error code: {}'.format(tweet_data))
-
-        with open(output_file_path, 'w') as fp:
-            for json_obj in json_list:
-                fp.write('{}\n'.format(json.dumps(json_obj)))
+        write_jsonl_file(json_list, output_file_path, first=first)
 
 
 def main(args):
