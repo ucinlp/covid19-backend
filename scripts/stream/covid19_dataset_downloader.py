@@ -1,4 +1,5 @@
 import argparse
+import gzip
 import json
 import os
 import sys
@@ -50,9 +51,9 @@ def send_query(client, ids_str):
 
 
 def write_jsonl_file(json_list, output_file_path, first=True):
-    write_mode = 'w' if first else 'a'
+    write_mode = 'wt' if first else 'at'
     if len(json_list) > 0:
-        with open(output_file_path, write_mode) as fp:
+        with gzip.open(output_file_path, write_mode) as fp:
             for json_obj in json_list:
                 fp.write('{}\n'.format(json.dumps(json_obj)))
 
@@ -64,11 +65,16 @@ def download_tweet_data(input_dir_path, batch_size, output_dir_path):
 
     done_set = get_done_set(output_dir_path)
     client = OAuth1Session(CONSUMER_KEY, CONSUMER_SECRET, ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
-    for input_file_path in get_file_paths(input_dir_path, ext='.txt'):
+    for input_file_path in sorted(get_file_paths(input_dir_path, ext='.txt')):
         output_file_path =\
+            os.path.join(output_dir_path, os.path.basename(input_file_path).replace('.txt', '.jsonl.gz'))
+        old_output_file_path = \
             os.path.join(output_dir_path, os.path.basename(input_file_path).replace('.txt', '.jsonl'))
-        if output_file_path in done_set:
-            print('`{}` already exists. Download process is skipped.'.format(output_file_path))
+        root_dir_path = os.path.dirname(output_file_path)
+        if output_file_path in done_set or \
+                old_output_file_path in done_set or os.path.isfile(root_dir_path + '.tar.gz'):
+            tmp_file_path = output_file_path if output_file_path in done_set else old_output_file_path
+            print('`{}` already exists. Download process is skipped.'.format(tmp_file_path))
             continue
 
         with open(input_file_path, 'r') as fp:
