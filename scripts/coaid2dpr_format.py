@@ -26,7 +26,7 @@ def read_csv_file(file_path):
             if first:
                 first = False
                 continue
-            
+
             if source_title not in data_dict:
                 data_dict[source_title] = {'positive_ctxs': list()}
             data_dict[source_title]['positive_ctxs'].append({'title': None, 'text': tweet})
@@ -37,8 +37,7 @@ def write_jsonl_file(entries, output_file_path):
     mode = 'w'
     Path(output_file_path).parent.mkdir(parents=True, exist_ok=True)
     with open(output_file_path, mode) as fp:
-        for entry in entries:
-            fp.write('{}\n'.format(json.dumps(entry)))
+        json.dump(entries, fp)
 
 
 def create_dataset(data_dict, jsonl_file_paths, neg_scale):
@@ -67,6 +66,7 @@ def create_dataset(data_dict, jsonl_file_paths, neg_scale):
                     break
             if done:
                 break
+        entry_dict['negative_ctxs'] = negative_ctx_list
         dict_list.append(entry_dict)
     return dict_list
 
