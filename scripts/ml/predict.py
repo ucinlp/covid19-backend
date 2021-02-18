@@ -102,18 +102,9 @@ def main():
     
     if model_name == 'bert-base-cosine':
         model = BERTCosine('base')
-        model.model.eval()
-        #model.model.cuda()
-    
-    if model_name == 'bert-ft-cosine':
-        model = BERTCosine('domain_adapted')
-        model.model.eval()
-        #model.model.cuda()
         
     if model_name == 'ct-bert-cosine':
         model = BERTCosine('ct-bert')
-        model.model.eval()
-        #model.model.cuda()
         
     if model_name == 'bert-score-base':
       model = BertScoreDetector('bert-large-uncased')
@@ -123,7 +114,8 @@ def main():
 
     if model_name in ['bert-score-ct','comb-bilstm-snli', 'comb-bilstm-mnli',
                       'comb-bilstm-mednli', 'comb-sbert-snli-ct', 'comb-sbert-mnli-ct',
-                      'comb-sbert-mednli-ct' ]:
+                      'comb-sbert-mednli-ct', 'comb-sbert-fever-ct', 'comb-sbert-scifact-ct',
+                      'comb-sbert-ann-ct']:
       model = BertScoreDetector('digitalepidemiologylab/covid-twitter-bert')
       
     if model_name == 'pyserini':
@@ -152,7 +144,7 @@ def main():
         model = load_sbert_model('bert-base-cased', model_path)
     
     if model_name in ['sbert-snli-ct', 'comb-sbert-snli-ct']:   
-        model_path = os.path.join('/', args.model_dir, 'snli-sbert-ct-ckpt-5.pt')
+        model_path = os.path.join('/', args.model_dir, 'snli-sbert-ct-ckpt-2.pt')
         if model_name == 'sbert-snli-ct':
             model = load_sbert_model('digitalepidemiologylab/covid-twitter-bert', model_path)  
         elif model_name == 'comb-sbert-snli-ct':
@@ -170,7 +162,29 @@ def main():
         if model_name == 'sbert-mednli-ct':
             model = load_sbert_model('digitalepidemiologylab/covid-twitter-bert', model_path)    
         elif model_name == 'comb-sbert-mednli-ct':
-            model2 = load_sbert_model('digitalepidemiologylab/covid-twitter-bert', model_path)    
+            model2 = load_sbert_model('digitalepidemiologylab/covid-twitter-bert', model_path)               
+            
+    if model_name in ['sbert-ann-ct', 'comb-sbert-ann-ct'] :   
+        #model_path = os.path.join('/', args.model_dir, 'ann-sbert-ct-9.pt')
+        model_path = os.path.join('/', args.model_dir, 'ann-ch-sbert-ct-4.pt')
+        if model_name == 'sbert-ann-ct':
+            model = load_sbert_model('digitalepidemiologylab/covid-twitter-bert', model_path)    
+        elif model_name == 'comb-sbert-ann-ct':
+            model2 = load_sbert_model('digitalepidemiologylab/covid-twitter-bert', model_path)
+            
+    if model_name in ['sbert-fever-ct', 'comb-sbert-fever-ct'] :   
+        model_path = os.path.join('/', args.model_dir, 'fever-sbert-ct-1.pt')
+        if model_name == 'sbert-fever-ct':
+            model = load_sbert_model('digitalepidemiologylab/covid-twitter-bert', model_path)    
+        elif model_name == 'comb-sbert-fever-ct':
+            model2 = load_sbert_model('digitalepidemiologylab/covid-twitter-bert', model_path)
+            
+    if model_name in ['sbert-scifact-ct', 'comb-sbert-scifact-ct'] :   
+        model_path = os.path.join('/', args.model_dir, 'scifact-sbert-ct-2.pt')
+        if model_name == 'sbert-scifact-ct':
+            model = load_sbert_model('digitalepidemiologylab/covid-twitter-bert', model_path)    
+        elif model_name == 'comb-sbert-scifact-ct':
+            model2 = load_sbert_model('digitalepidemiologylab/covid-twitter-bert', model_path)
             
     if model_name in ['bilstm-snli', 'bilstm-mnli', 'bilstm-mednli', 
                       'comb-bilstm-snli', 'comb-bilstm-mnli', 'comb-bilstm-mednli' ]:
@@ -180,20 +194,33 @@ def main():
             model = load_bilstm (model_path, field_path )
         elif model_name in ['comb-bilstm-snli', 'comb-bilstm-mnli', 'comb-bilstm-mednli']:
             model2 = load_bilstm (model_path, field_path )
+            
         
-    if model_name in ['bert-score-base', 'bert-score-ft', 'bert-score-ct','bilstm-snli', 'bilstm-mnli',
-                      'bilstm-mednli', 'sbert-snli-ct', 'sbert-mnli-ct', 'comb-bilstm-snli', 
-                      'comb-bilstm-mnli', 'comb-bilstm-mednli', 'comb-sbert-snli-ct', 
-                      'comb-sbert-mnli-ct', 'comb-sbert-mednli-ct']:
+    if model_name in ['bert-score-base', 'bert-score-ft', 'bert-score-ct',
+                      'bilstm-snli', 'bilstm-mnli','bilstm-mednli', 
+                      'sbert-snli', 'sbert-mnli','sbert-mednli',
+                      'sbert-snli-ct', 'sbert-mnli-ct','sbert-mednli-ct',
+                      'comb-bilstm-snli', 'comb-bilstm-mnli', 'comb-bilstm-mednli', 
+                      'comb-sbert-snli-ct','comb-sbert-mnli-ct', 'comb-sbert-mednli-ct',
+                      'sbert-fever-ct', 'comb-sbert-fever-ct',
+                      'sbert-scifact-ct', 'comb-sbert-scifact-ct'
+                      'sbert-ann-ct', 'comb-sbert-ann-ct']:
         model.eval()
         if torch.cuda.is_available():
             model.cuda()
         
         if model_name in ['comb-bilstm-snli', 'comb-bilstm-mnli', 'comb-bilstm-mednli', 
-                          'comb-sbert-snli-ct', 'comb-sbert-mnli-ct', 'comb-sbert-mednli-ct' ]: 
+                          'comb-sbert-snli-ct', 'comb-sbert-mnli-ct', 'comb-sbert-mednli-ct',
+                          'comb-sbert-fever-ct', 'comb-sbert-scifact-ct','comb-sbert-ann-ct']: 
             model2.eval()
             if torch.cuda.is_available():
                 model2.cuda()
+                
+    if model_name in ['bert-base-cosine', 'ct-bert-cosine']:
+        model.model.eval()
+        if torch.cuda.is_available():
+            model.model.cuda()
+        
     
     #Read misinformation
     misinfos = MisconceptionDataset.from_db(db_input)    
@@ -209,7 +236,8 @@ def main():
                       'glove-avg-cosine', 'boe-log-snli', 'boe-log-mnli', 
                       'boe-log-mednli' ,'bilstm-snli', 'bilstm-mnli', 'bilstm-mednli', 
                       'comb-bilstm-snli', 'comb-bilstm-mnli', 'comb-bilstm-mednli',
-                      'comb-sbert-snli-ct', 'comb-sbert-mnli-ct', 'comb-sbert-mednli-ct']:
+                      'comb-sbert-snli-ct', 'comb-sbert-mnli-ct', 'comb-sbert-mednli-ct',
+                      'comb-sbert-fever-ct', 'comb-sbert-scifact-ct','comb-sbert-ann-ct']:
         mis_vect = model._encode (mis)
     
     elif model_name in ['bow-log-snli', 'bow-log-mnli', 'bow-log-mednli']:
@@ -296,7 +324,8 @@ def main():
                   
         #SBERT
         if model_name in ['sbert-snli', 'sbert-mnli', 'sbert-mednli', 
-                          'sbert-mednli-ct', 'sbert-mnli-ct', 'sbert-snli-ct']:
+                          'sbert-mednli-ct', 'sbert-mnli-ct', 'sbert-snli-ct',
+                          'sbert-fever-ct', 'sbert-scifact-ct','sbert-ann-ct']:
             with torch.no_grad():
                 logits = model(posts, mis)           
                 _, preds = logits.max(dim=-1)                        
@@ -305,7 +334,8 @@ def main():
         
         #Stacked # BiLSTM and SBERT
         if model_name in ['comb-bilstm-snli', 'comb-bilstm-mnli', 'comb-bilstm-mednli', 
-                          'comb-sbert-snli-ct', 'comb-sbert-mnli-ct', 'comb-sbert-mednli-ct']:
+                          'comb-sbert-snli-ct', 'comb-sbert-mnli-ct', 'comb-sbert-mednli-ct', 
+                          'comb-sbert-fever-ct', 'comb-sbert-scifact-ct','comb-sbert-ann-ct']:
           ## BertScore-DA
           post_vect = model._encode([input['text']])
           score = model._score(post_vect, mis_vect)
@@ -372,8 +402,9 @@ def main():
                                'confidence': max_probs, 
                                'misc' : probs.tolist()}).to_dict('records')
     
-        elif model_name in ['sbert-snli', 'sbert-mnli', 'sbert-mednli', 
-                            'sbert-mednli-ct', 'sbert-snli-ct', 'sbert-mnli-ct']:
+        elif model_name in ['sbert-snli', 'sbert-mnli', 'sbert-mednli',  
+                            'sbert-mednli-ct', 'sbert-snli-ct', 'sbert-mnli-ct', 
+                            'sbert-fever-ct', 'sbert-scifact-ct','sbert-ann-ct']:
             df = pd.DataFrame({'input_id': post_ids, 
                                'model_id': model_name, 
                                'label_id': preds.tolist(),

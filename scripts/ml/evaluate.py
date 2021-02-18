@@ -42,12 +42,18 @@ STANCE_MODELS = [
     'sbert-snli-ct',
     'sbert-mnli-ct',
     'sbert-mednli-ct',
+    'sbert-fever-ct',
+    'sbert-scifact-ct',
+    'sbert-ann-ct',
     'comb-bilstm-snli',
     'comb-bilstm-mnli',
     'comb-bilstm-mednli',
     'comb-sbert-snli-ct',
     'comb-sbert-mnli-ct',
-    'comb-sbert-mednli-ct'
+    'comb-sbert-mednli-ct',
+    'comb-sbert-fever-ct',
+    'comb-sbert-scifact-ct',
+    'comb-sbert-ann-ct'
 ]
 
 
@@ -201,13 +207,11 @@ def get_outputs(
 def main(args):
     # Load data
     annotated = get_annotated_data(args.db, args.eval_data)
-
     # Predictions
     if args.file_name:
         pred_df = get_preds_file(args.file_name, args.model_name)
     else:
         pred_df = get_preds_db(args.db, args.model_name)
-
     # Combine
     eval_df = annotated.merge(
         pred_df,
@@ -215,7 +219,6 @@ def main(args):
         right_on=['input_id', 'misinfo_id'],
         how='left',
     )
-
     # Compute metrics
     if args.model_name in SIMILARITY_MODELS:
         eval_df = eval_df.assign(inv_rank = lambda x: 1/x['rank'])
