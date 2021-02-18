@@ -1,4 +1,5 @@
 import argparse
+import gzip
 import json
 import os
 import sys
@@ -49,6 +50,14 @@ def send_query(client, ids_str):
     return None
 
 
+def write_jsonl_file(json_list, output_file_path, first=True):
+    write_mode = 'wt' if first else 'at'
+    if len(json_list) > 0:
+        with gzip.open(output_file_path, write_mode) as fp:
+            for json_obj in json_list:
+                fp.write('{}\n'.format(json.dumps(json_obj)))
+
+
 def download_tweet_data(input_dir_path, batch_size, output_dir_path):
     if not os.path.isdir(output_dir_path):
         os.makedirs(output_dir_path)
@@ -56,11 +65,16 @@ def download_tweet_data(input_dir_path, batch_size, output_dir_path):
 
     done_set = get_done_set(output_dir_path)
     client = OAuth1Session(CONSUMER_KEY, CONSUMER_SECRET, ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
-    for input_file_path in get_file_paths(input_dir_path, ext='.txt'):
+    for input_file_path in sorted(get_file_paths(input_dir_path, ext='.txt')):
         output_file_path =\
+            os.path.join(output_dir_path, os.path.basename(input_file_path).replace('.txt', '.jsonl.gz'))
+        old_output_file_path = \
             os.path.join(output_dir_path, os.path.basename(input_file_path).replace('.txt', '.jsonl'))
-        if output_file_path in done_set:
-            print('`{}` already exists. Download process is skipped.'.format(output_file_path))
+        root_dir_path = os.path.dirname(output_file_path)
+        if output_file_path in done_set or \
+                old_output_file_path in done_set or os.path.isfile(root_dir_path + '.tar.gz'):
+            tmp_file_path = output_file_path if output_file_path in done_set else old_output_file_path
+            print('`{}` already exists. Download process is skipped.'.format(tmp_file_path))
             continue
 
         with open(input_file_path, 'r') as fp:
@@ -69,6 +83,7 @@ def download_tweet_data(input_dir_path, batch_size, output_dir_path):
         index = 0
         request_count = 0
         json_list = list()
+        first = True
         print('Processing {}'.format(input_file_path))
         while index < len(tweet_ids):
             ids_str = ','.join(tweet_ids[index: index + batch_size])
@@ -78,19 +93,21 @@ def download_tweet_data(input_dir_path, batch_size, output_dir_path):
                 json_list.extend(tweet_data)
                 index += batch_size
             elif tweet_data == 429:
-                print('{} requests were sent after the interval'.format(request_count))
-                print('Sleeping for 15 min')
+                num_tweets = len(json_list)
+                write_jsonl_file(json_list, output_file_path, first=first)
+                json_list.clear()
+                first = False
+                print('{} requests were sent & {} tweets were downloaded '
+                      'after the interval'.format(request_count, num_tweets))
+                print('Sleeping for 1 min')
                 # With standard APIs, 30 requests / min
-                time.sleep(60.0 * 15)
+                time.sleep(60.0)
                 request_count = 0
             elif tweet_data == 504:
                 client = OAuth1Session(CONSUMER_KEY, CONSUMER_SECRET, ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
             else:
                 print('Error code: {}'.format(tweet_data))
-
-        with open(output_file_path, 'w') as fp:
-            for json_obj in json_list:
-                fp.write('{}\n'.format(json.dumps(json_obj)))
+        write_jsonl_file(json_list, output_file_path, first=first)
 
 
 def main(args):
