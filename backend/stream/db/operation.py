@@ -1,7 +1,7 @@
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import select
-
+from typing import List, Tuple, Dict, Optional
 from backend.stream.db.table import get_table_class, Input, Output, Misinformation
 
 
@@ -85,6 +85,17 @@ def get_misinfo(engine, connection, source=None):
 
 
 def put_outputs(record_dicts, engine):
+    """
+    record_dicts: List[Dict] (list of the following record_dict)
+    record_dict = {
+        'input_id': int,
+        'model_id': str,
+        'misinfo_id': str,
+        'label_id': int,
+        'confidence': float,
+        'misc': dict (can be omitted)
+    }
+    """
     input_size = len(record_dicts)
     inserted_record_dicts = add_records(record_dicts, engine, 'Output')
     output_size = len(inserted_record_dicts)
