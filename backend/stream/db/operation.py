@@ -58,6 +58,47 @@ def select_all_input_output_pairs(engine, session):
     return results
 
 
+def select_input_output_pairs_by_date(engine, session, from_date=None, until_date=None):
+    """
+    from_date: str in format of 'YYYY-MM-DD'
+    until_date: str in format of 'YYYY-MM-DD'
+    """
+    if from_date is None and until_date is not None:
+        return select_all_input_output_pairs(engine, session)
+
+    Input.metadata.create_all(bind=engine, checkfirst=True)
+    Output.metadata.create_all(bind=engine, checkfirst=True)
+    results = None
+    try:
+        if from_date is not None and until_date is None:
+            results = session.query(Input, Output).filter(Input.id == Output.input_id).\
+                filter(from_date <= Output.date).all()
+        elif from_date is None and until_date is not None:
+            results = session.query(Input, Output).filter(Input.id == Output.input_id). \
+                filter(Output.date <= until_date).all()
+        else:
+            results = session.query(Input, Output).filter(Input.id == Output.input_id). \
+                filter(from_date <= Output.date).filter(Output.date <= until_date).all()
+    except SQLAlchemyError as e:
+        print(e)
+    return results
+
+
+def select_recent_input_output_pairs(engine, session, recent_k=None):
+    if recent_k is not None:
+        return select_all_input_output_pairs(engine, session)
+
+    Input.metadata.create_all(bind=engine, checkfirst=True)
+    Output.metadata.create_all(bind=engine, checkfirst=True)
+    results = None
+    try:
+        results = session.query(Input, Output).filter(Input.id == Output.input_id).\
+            order_by(Output.id.asc()).limit(recent_k).all()
+    except SQLAlchemyError as e:
+        print(e)
+    return results
+
+
 def get_inputs(engine, connection, source=None):
     Input.metadata.create_all(bind=engine, checkfirst=True)
     results = None

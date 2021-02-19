@@ -5,7 +5,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from backend.stream.db.operation import add_records, select_all, select_all_input_output_pairs, get_inputs, \
-    get_misinfo, put_outputs
+    get_misinfo, put_outputs, select_input_output_pairs_by_date, select_recent_input_output_pairs
 from backend.stream.db.table import Label, Reference, Model, Source, Misinformation, Input, Output
 
 
@@ -226,3 +226,53 @@ class OperationTest(TestCase):
                             {'input_id': 2, 'model_id': 'bert-test-ver', 'label_id': 0,
                              'misinfo_id': 1, 'confidence': 0.5}]
         assert put_outputs(entity_dict_list, engine)
+
+    def test_select_input_output_pairs_by_date(self):
+        engine = create_engine('sqlite://', echo=False)
+        # Register a source
+        add_records([{'type': 'Twitter'}], engine, 'Source')
+        # Register an input
+        add_records([{'text': 'no', 'source_type': 'Twitter', 'source_id': 'some tweet ID'}], engine, 'Input')
+        add_records([{'text': 'hmm', 'source_type': 'Twitter', 'source_id': 'some tweet ID'}], engine, 'Input')
+        add_records([{'text': 'ok', 'source_type': 'Twitter', 'source_id': 'some tweet ID'}], engine, 'Input')
+        # Register a model
+        add_records([{'id': 'bert-test-ver', 'name': 'BERT score', 'human': False, 'config': {}}], engine, 'Model')
+        # Register a label
+        add_records([{'id': 0, 'name': 'misleading'}], engine, 'Label')
+        # Register misinformation
+        add_records([{'text': 'hmm', 'url': json.dumps({'list': ['http://www.who.int']}), 'source': 'WHO',
+                      'reliability': 3}], engine, 'Misinformation')
+        entity_dict_list = [{'input_id': 1, 'model_id': 'bert-test-ver', 'label_id': 0,
+                             'misinfo_id': 1, 'confidence': 0.5},
+                            {'input_id': 2, 'model_id': 'bert-test-ver', 'label_id': 0,
+                             'misinfo_id': 1, 'confidence': 0.5}]
+        add_records(entity_dict_list, engine, 'Output')
+        session = sessionmaker(bind=engine)()
+        results = select_input_output_pairs_by_date(engine, session, from_date='1900-01-01', until_date='2100-01-01')
+        assert all(row.Input.id == row.Output.input_id for row in results)
+        session.close()
+
+    def test_select_recent_input_output_pairs(self):
+        engine = create_engine('sqlite://', echo=False)
+        # Register a source
+        add_records([{'type': 'Twitter'}], engine, 'Source')
+        # Register an input
+        add_records([{'text': 'no', 'source_type': 'Twitter', 'source_id': 'some tweet ID'}], engine, 'Input')
+        add_records([{'text': 'hmm', 'source_type': 'Twitter', 'source_id': 'some tweet ID'}], engine, 'Input')
+        add_records([{'text': 'ok', 'source_type': 'Twitter', 'source_id': 'some tweet ID'}], engine, 'Input')
+        # Register a model
+        add_records([{'id': 'bert-test-ver', 'name': 'BERT score', 'human': False, 'config': {}}], engine, 'Model')
+        # Register a label
+        add_records([{'id': 0, 'name': 'misleading'}], engine, 'Label')
+        # Register misinformation
+        add_records([{'text': 'hmm', 'url': json.dumps({'list': ['http://www.who.int']}), 'source': 'WHO',
+                       'reliability': 3}], engine, 'Misinformation')
+        entity_dict_list = [{'input_id': 1, 'model_id': 'bert-test-ver', 'label_id': 0,
+                             'misinfo_id': 1, 'confidence': 0.5},
+                            {'input_id': 2, 'model_id': 'bert-test-ver', 'label_id': 0,
+                             'misinfo_id': 1, 'confidence': 0.5}]
+        add_records(entity_dict_list, engine, 'Output')
+        session = sessionmaker(bind=engine)()
+        results = select_recent_input_output_pairs(engine, session, recent_k=1)
+        assert len(results) == 1
+        session.close()
