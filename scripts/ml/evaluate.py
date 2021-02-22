@@ -119,6 +119,8 @@ def get_annotated_data(db, annotated_data):
         'gold_label': labels,
         'misinfo_id': misinfo_ids,
     })  
+    
+    annotated['gold_label'] = annotated.gold_label.astype(int)
 
     return annotated
 
@@ -158,10 +160,14 @@ def get_preds_db(db, model_name):
         'misinfo_id': mid,
         'confidence': confidence,
     })
+    
+    
     if model_name in SIMILARITY_MODELS:
         grouped = pred_df.groupby('input_id')
         ranked_confidence = grouped['confidence'].rank(ascending=False)
         pred_df['rank'] = ranked_confidence
+    else:
+        pred_df['label_id'] = pred_df.label_id.astype(int)
     return pred_df
 
 
@@ -257,7 +263,7 @@ def main(args):
         print(output_string)
 
     elif args.model_name in STANCE_MODELS:
-        
+                
         # Classification Metrics
         cm = confusion_matrix(eval_df.gold_label, eval_df.label_id)
         class_precision, class_recall, class_f1 = precision_recall_f1(cm)
