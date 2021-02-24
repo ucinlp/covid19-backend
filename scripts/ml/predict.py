@@ -166,7 +166,7 @@ def main():
             
     if model_name in ['sbert-ann-ct', 'comb-sbert-ann-ct'] :   
         #model_path = os.path.join('/', args.model_dir, 'ann-sbert-ct-9.pt')
-        model_path = os.path.join('/', args.model_dir, 'ann-ch-sbert-ct-4.pt')
+        model_path = os.path.join('/', args.model_dir, 'ann-ch-sbert-ct-3.pt')
         if model_name == 'sbert-ann-ct':
             model = load_sbert_model('digitalepidemiologylab/covid-twitter-bert', model_path)    
         elif model_name == 'comb-sbert-ann-ct':
