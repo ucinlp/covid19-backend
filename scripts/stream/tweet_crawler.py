@@ -47,10 +47,14 @@ def crawl_tweets(tweepy_api, query_config, save_config, since_date, until_date, 
     batch_index = 0
     tweet_count = 0
     today_date = date.today()
-    if since_date is None:
+    if since_date is None and until_date is None:
         since_date = str(today_date - timedelta(days=1))
-    if until_date is None:
         until_date = str(today_date)
+    elif since_date is None:
+        since_date = str(date.fromisoformat(until_date) - timedelta(days=1))
+    elif until_date is None:
+        until_date = str(date.fromisoformat(since_date) + timedelta(days=1))
+
     try:
         search_cursor = Cursor(tweepy_api.search, since=since_date, until=until_date, **query_config).items()
         tweet_list = list()
