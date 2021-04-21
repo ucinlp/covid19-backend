@@ -1,5 +1,5 @@
 query:
-  q: '(hiv OR aid) (sex OR penis) -filter:retweets'
+  q: '(hiv OR aids) (sex OR fuck OR screw OR bang OR shag OR hump OR cum OR penis OR dick OR cock OR prick OR dong) -filter:retweets'
   lang: 'en'
   tweet_mode: 'extended'
 

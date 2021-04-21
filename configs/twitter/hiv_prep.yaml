@@ -1,0 +1,8 @@
+query:
+  q: '(hiv OR aids) (prep OR pre-exposure OR prophylaxis OR prevention OR whore OR truvada OR descovy OR gilead) OR (slut pill) OR (gay pill) OR (preexposure prophylaxis) -filter:retweets'
+  lang: 'en'
+  tweet_mode: 'extended'
+
+save:
+  output_prefix: 'hiv_prep'
+  batch_size: 200000
