@@ -23,5 +23,13 @@ python3 -m scripts.stream.covid19_dataset_downloader.py --input ~/COVID-19-Tweet
 2. Execute the following commands e.g.,
 ```
 . configs/env_var.sh
-python3 scripts/stream/tweet_crawler.py --config configs/twitter/hiv.yaml --output ${OUTPUT_DIR}
+python3 -m scripts.stream.tweet_crawler.py --config configs/twitter/hiv.yaml --output ${OUTPUT_DIR}
+```
+
+## tweet_counter.py
+
+### Count downloaded tweets (Numbers of unique tweets, users, etc)
+Execute the following commands
+```
+python3 -m scripts.stream.tweet_counter.py --input ${INPUT_DIR}
 ```
