@@ -1,0 +1,25 @@
+category: 'washington_post'
+
+news_api:
+    endpoint: 'everything'
+    params:
+        q: 'hiv OR aids'
+        qInTitle:
+        sources:
+        domains: 'washingtonpost.com'
+        excludeDomains:
+        from:
+        to:
+        language: 'en'
+        sortBy: 'publishedAt'
+        pageSize: 100
+
+diffbot:
+    params:
+        fields:
+        paging:
+        maxTags:
+        tagConfidence:
+        discussion:
+        timeout: 10000
+        callback:
