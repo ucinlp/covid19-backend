@@ -1,4 +1,4 @@
-category: 'huffpost'
+category: 'any'
 
 news_api:
     endpoint: 'everything'
@@ -6,7 +6,7 @@ news_api:
         q: 'hiv OR aids'
         qInTitle:
         sources:
-        domains: 'huffpost.com'
+        domains:
         excludeDomains:
         from:
         to:
