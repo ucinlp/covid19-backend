@@ -21,12 +21,17 @@ def get_argparser():
     parser = argparse.ArgumentParser(description='COVID-19 Tweet dataset downloader')
     parser.add_argument('--input', required=True, type=lambda p: Path(p), help='input root dir path')
     parser.add_argument('--batch_size', default=100, type=int, help='number of tweets per request')
+    parser.add_argument('--num_months', type=int, help='number of months to download recent tweets')
+    parser.add_argument('--consumer_key', type=str, help='Twitter consumer key')
+    parser.add_argument('--consumer_secret', type=str, help='Twitter consumer secret')
+    parser.add_argument('--access_token', type=str, help='Twitter access token')
+    parser.add_argument('--access_token_secret', type=str, help='Twitter access token secret')
     parser.add_argument('--output', required=True, type=lambda p: Path(p), help='output root dir path')
     return parser
 
 
 def get_done_set(output_dir_path):
-    file_paths = get_file_paths(output_dir_path, ext='.jsonl')
+    file_paths = get_file_paths(output_dir_path, ext='.jsonl') + get_file_paths(output_dir_path, ext='.jsonl.gz')
     done_set = set()
     for file_path in file_paths:
         if os.stat(file_path).st_size > 0:
@@ -58,13 +63,14 @@ def write_jsonl_file(json_list, output_file_path, first=True):
                 fp.write('{}\n'.format(json.dumps(json_obj)))
 
 
-def download_tweet_data(input_dir_path, batch_size, output_dir_path):
+def download_tweet_data(input_dir_path, consumer_key, consumer_secret, access_token, access_token_secret,
+                        batch_size, output_dir_path):
     if not os.path.isdir(output_dir_path):
         os.makedirs(output_dir_path)
         print('Created {}'.format(output_dir_path))
 
     done_set = get_done_set(output_dir_path)
-    client = OAuth1Session(CONSUMER_KEY, CONSUMER_SECRET, ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
+    client = OAuth1Session(consumer_key, consumer_secret, access_token, access_token_secret)
     for input_file_path in sorted(get_file_paths(input_dir_path, ext='.txt')):
         output_file_path =\
             os.path.join(output_dir_path, os.path.basename(input_file_path).replace('.txt', '.jsonl.gz'))
@@ -104,7 +110,7 @@ def download_tweet_data(input_dir_path, batch_size, output_dir_path):
                 time.sleep(60.0)
                 request_count = 0
             elif tweet_data == 504:
-                client = OAuth1Session(CONSUMER_KEY, CONSUMER_SECRET, ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
+                client = OAuth1Session(consumer_key, consumer_secret, access_token, access_token_secret)
             else:
                 print('Error code: {}'.format(tweet_data))
         write_jsonl_file(json_list, output_file_path, first=first)
@@ -114,9 +120,18 @@ def main(args):
     input_dir_paths = get_dir_paths(args.input)
     batch_size = args.batch_size
     output_root_dir_path = args.output
-    for input_dir_path in sorted(input_dir_paths):
+    num_months = args.num_months
+    input_dir_paths = \
+        sorted(input_dir_paths) if num_months is None else sorted(input_dir_paths, reverse=True)[:num_months]
+
+    consumer_key = CONSUMER_KEY if args.consumer_key is None else args.consumer_key
+    consumer_secret = CONSUMER_SECRET if args.consumer_secret is None else args.consumer_secret
+    access_token = ACCESS_TOKEN if args.access_token is None else args.access_token
+    access_token_secret = ACCESS_TOKEN_SECRET if args.access_token_secret is None else args.access_token_secret
+    for input_dir_path in input_dir_paths:
         output_dir_path = os.path.join(output_root_dir_path, os.path.basename(input_dir_path))
-        download_tweet_data(input_dir_path, batch_size, output_dir_path)
+        download_tweet_data(input_dir_path, consumer_key, consumer_secret, access_token, access_token_secret,
+                            batch_size, output_dir_path)
 
 
 if __name__ == '__main__':
