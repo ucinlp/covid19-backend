@@ -89,17 +89,17 @@ python3 -m scripts.ml.train_bilstm --train PATH\TO\TRAIN_DATA.jsonl --dev PATH\T
 ```
 #### SBERT
 ```
-python3 scripts.ml.train_nli --model-name bert-base-cased --batch_size=10 --epochs=10 --lr=5e-5 --accumulation_steps 32 --train PATH\TO\TRAIN_DATA.jsonl --dev PATH\TO\DEV_DATA.jsonl --ckpt CKPT_NAME
+python3 -m scripts.ml.train_nli --model-name bert-base-cased --batch_size=10 --epochs=10 --lr=5e-5 --accumulation_steps 32 --train PATH\TO\TRAIN_DATA.jsonl --dev PATH\TO\DEV_DATA.jsonl --ckpt CKPT_NAME
 ```
 #### SBERT - DA
 ```
-python3 scripts.ml.train_nli --model-name digitalepidemiologylab/covid-twitter-bert --batch_size=10 --epochs=10 --lr=5e-5 --accumulation_steps 32 --train PATH\TO\TRAIN_DATA.jsonl --dev PATH\TO\DEV_DATA.jsonl --ckpt CKPT_NAME
+python3 -m scripts.ml.train_nli --model-name digitalepidemiologylab/covid-twitter-bert --batch_size=10 --epochs=10 --lr=5e-5 --accumulation_steps 32 --train PATH\TO\TRAIN_DATA.jsonl --dev PATH\TO\DEV_DATA.jsonl --ckpt CKPT_NAME
 
 ```
 
 ## Predict
 ```
-python3 scripts.ml.predict --model_name MODEL_NAME --model_dir PATH\TO\MODEL --db_input backend.db --file PATH\TO\SAVE\PREDICTIONS.csv
+python3 -m scripts.ml.predict --model_name MODEL_NAME --model_dir PATH\TO\MODEL --db_input backend.db --file PATH\TO\SAVE\PREDICTIONS.csv
 ```
 
 Note,
@@ -109,7 +109,7 @@ Note,
 ## Evaluate
 
 ```
-python3 scripts.ml.evaluate --db backend.db --model_name MODEL_NAME --eval_data Arjuna --file_name PATH\TO\PREDICTIONS.csv
+python3 -m scripts.ml.evaluate --db backend.db --model_name MODEL_NAME --eval_data Arjuna --file_name PATH\TO\PREDICTIONS.csv
 ```
 Note,
 * `MODEL_NAME` for each model can be found in `model_names.txt`
