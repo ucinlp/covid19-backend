@@ -2,6 +2,7 @@ from datetime import datetime
 
 from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, JSON, String
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship
 
 base_cls = declarative_base()
 TABLE_CLASS_DICT = dict()
@@ -106,6 +107,11 @@ class Output(base_cls):
     confidence = Column(Float, nullable=False)
     misc = Column(JSON, nullable=True)
     date = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    input = relationship('Input', single_parent=True)
+    model = relationship('Model')
+    misinformation = relationship('Misinformation')
+    label = relationship('Label')
 
     @classmethod
     def check_if_exists(cls, entity, session):

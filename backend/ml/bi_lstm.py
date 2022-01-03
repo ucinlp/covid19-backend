@@ -64,7 +64,6 @@ class BiLSTM(nn.Module):
                
         return prediction
 
-    #@overrides
     def _encode (self, sentences):
 
       ## Tokenize

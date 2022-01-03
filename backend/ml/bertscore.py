@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from typing import List
 
 import numpy as np
-from overrides import overrides
 import torch
 from transformers import AutoModel, AutoTokenizer
 
@@ -124,7 +123,6 @@ class BertScoreDetector(Detector, torch.nn.Module):
         self._tokenizer = AutoTokenizer.from_pretrained(model_name)
         self._model = AutoModel.from_pretrained(model_name)
 
-    @overrides
     def _encode(self, sentences: List[str]) -> MaskedEmbeddings:
         device = next(self.parameters()).device
         model_input = self._tokenizer.batch_encode_plus(
@@ -138,16 +136,14 @@ class BertScoreDetector(Detector, torch.nn.Module):
         embeddings, *_ = self._model(**model_input)
         return MaskedEmbeddings(embeddings, mask)
 
-    @overrides
     def _score(self,
-               encoded_sentences: MaskedEmbeddings,
-               encoded_misconceptions: MaskedEmbeddings) -> np.ndarray:
+               sentences: MaskedEmbeddings,
+               misconceptions: MaskedEmbeddings) -> np.ndarray:
         with torch.no_grad():
-            score_dict = bertscore(encoded_sentences, encoded_misconceptions)
+            score_dict = bertscore(sentences, misconceptions)
         score = score_dict[self._score_type]
         return score.cpu().numpy()
 
-    @overrides
     def _predict(self, scores: np.ndarray) -> List[List[int]]:
         # TODO: @rloganiv - Something smarter thank just returning top-5.
         k = 5

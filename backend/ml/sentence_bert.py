@@ -4,7 +4,6 @@ SentenceBERT-based model
 from typing import Any, Dict, List
 
 import numpy as np
-from overrides import overrides
 import torch
 import torch.nn.functional as F
 from transformers import AutoModel, AutoTokenizer
@@ -42,7 +41,6 @@ class SentenceBertBase(Detector, torch.nn.Module):
     # TODO: Probably want to move this to its own class. In the bigger picture, do we want a
     # seperate classifier vs. metric learning object (similar to task-specific transformers)?
     # Should they just be head modules?
-    @overrides
     def forward(self,
                 anchor_sentences: List[str],
                 positive_sentences: List[str],
@@ -78,7 +76,6 @@ class SentenceBertBase(Detector, torch.nn.Module):
         )
         return loss
 
-    @overrides
     def _encode(self, sentences: List[str]) -> torch.FloatTensor:
         model_input = self._tokenizer.batch_encode_plus(
             sentences,
@@ -92,12 +89,11 @@ class SentenceBertBase(Detector, torch.nn.Module):
         pooled_embeddings = masked_embeddings.mean(1)  # average over sequence dim
         return pooled_embeddings
 
-    @overrides
     def _score(self,
-               encoded_sentences: torch.FloatTensor,
-               encoded_misconceptions: torch.FloatTensor) -> np.ndarray:
+               sentences: torch.FloatTensor,
+               misconceptions: torch.FloatTensor) -> np.ndarray:
         with torch.no_grad():
-            score = cosine_similarity(encoded_sentences, encoded_misconceptions)
+            score = cosine_similarity(sentences, misconceptions)
         return score.cpu().numpy()
 
 
@@ -114,7 +110,6 @@ class SentenceBertClassifier(Detector, torch.nn.Module):
             out_features=num_classes,
         )
 
-    @overrides
     def _encode(self, sentences: List[str]) -> torch.FloatTensor:
         device = next(self.parameters()).device
         model_input = self._tokenizer.batch_encode_plus(
@@ -131,7 +126,6 @@ class SentenceBertClassifier(Detector, torch.nn.Module):
         pooled_embeddings = masked_embeddings.sum(1) / mask.sum(1).unsqueeze(-1)
         return pooled_embeddings
 
-    @overrides
     def forward(self, sentences_a: List[str], sentences_b: List[str]):
         u = self._encode(sentences_a)
         v = self._encode(sentences_b)

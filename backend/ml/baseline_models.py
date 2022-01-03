@@ -2,7 +2,6 @@ import os
 from dataclasses import dataclass
 import pickle
 import numpy as np
-from overrides import overrides
 import torch
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -53,12 +52,10 @@ class BoWCosine(Detector):
         self.tfidf_vectorizer = TfidfVectorizer ()
         self.tfidf_vectorizer.fit(corpus)
         
-    @overrides
     def _encode(self, sentences):
         vectors = self.tfidf_vectorizer.transform(sentences)
         return vectors
 
-    @overrides
     def _score(self,
                encoded_sentences,
                encoded_misconceptions) -> np.ndarray:
@@ -80,7 +77,6 @@ class GloVeCosine(Detector):
                 vector = np.asarray(values[1:], "float32")
                 self.embeddings_dict[word] = vector
         
-    @overrides
     def _encode(self, sentences):
         enc_sentences = []
         for s in sentences:
@@ -88,7 +84,6 @@ class GloVeCosine(Detector):
         
         return enc_sentences
 
-    @overrides
     def _score(self,
                encoded_sentences,
                encoded_misconceptions) -> np.ndarray:
@@ -114,7 +109,6 @@ class BERTCosine(Detector):
             self.tokenizer = AutoTokenizer.from_pretrained('digitalepidemiologylab/covid-twitter-bert')
             self.model = AutoModel.from_pretrained('digitalepidemiologylab/covid-twitter-bert')
         
-    @overrides
     def _encode(self, sentences):
         results = []
         with torch.no_grad():
@@ -127,7 +121,6 @@ class BERTCosine(Detector):
                 results.append (avg_embeddings)
             return results
     
-    #@overrides
     #def _encode(self, sentences):
      #   with torch.no_grad():
       #          model_input = self.tokenizer.batch_encode_plus(sentences, pad_to_max_length=True, return_attention_mask=True, return_tensors='pt' )
@@ -137,7 +130,6 @@ class BERTCosine(Detector):
           #      avg_embeddings = embeddings.mean(axis=1).tolist()
         #return avg_embeddings 
     
-    @overrides
     def _score(self,
                encoded_sentences,
                encoded_misconceptions) -> np.ndarray:
@@ -162,14 +154,12 @@ class BoWLogistic(Detector):
         path = os.path.join('/',model_dir, 'bow_log.pkl')
         self.logreg = pickle.load(open(path, "rb"))
         
-    @overrides
     def _encode(self, sentences, sent_type):
         if sent_type == 'prem':
             return self.prem_vectorizer.transform(sentences)
         elif sent_type == 'hyp':
             return self.hyp_vectorizer.transform(sentences)
         
-    @overrides
     def _predict(self,
                encoded_premise,
                encoded_hypothesis) -> np.ndarray:
@@ -198,14 +188,12 @@ class BoELogistic(Detector):
         path = os.path.join('/',model_dir, 'boe_log.pkl') 
         self.logreg = pickle.load(open(path, "rb"))
         
-    @overrides
     def _encode(self, sentences):
         enc_sentences = []
         for s in sentences:
                 enc_sentences.append ( glove_word_average(self.embeddings_dict, s) )
         return enc_sentences
         
-    @overrides
     def _predict(self,
                encoded_premise,
                encoded_hypothesis) -> np.ndarray:

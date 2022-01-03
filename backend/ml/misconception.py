@@ -10,6 +10,7 @@ from typing import Tuple
 from backend.stream.db.operation import get_misinfo
 from backend.stream.db.util import get_engine
 
+
 def _tuplify(x):
     """Converts lists to tuples."""
     if isinstance(x, list):
