@@ -18,5 +18,3 @@ google-api-python-client
 google-auth-httplib2
 google-auth-oauthlib
 
-# Other
-overrides>=2.8.0

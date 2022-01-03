@@ -17,7 +17,7 @@ class Pipeline:
     def __call__(self, sentences, misconceptions):
         # Step 1. Retrieve most relevant misconception.
         predictions = self._retriever.predict(sentences, misconceptions)
-        logger.info('Retrieval output: %s', predictions)
+        logger.debug('Retrieval output: %s', predictions)
 
         # Step 2. Perform stance detection.
         # TODO: Support multiple relevant misconceptions.
@@ -41,7 +41,7 @@ class Pipeline:
             label = 'agrees' if label_id == 0 else 'disagrees'
             output_dict['predictions'].append({
                 'label': label,
-                'misinformation': misconception
+                'misinformation': misconception,
             })
         return output_dict
 
