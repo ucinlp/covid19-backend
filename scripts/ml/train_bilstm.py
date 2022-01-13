@@ -15,6 +15,8 @@ from backend.ml.bi_lstm import BiLSTM
 def map_values(row, values_dict):
     return values_dict[row]
 
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
 values_dict = {'neutral': 2, 
                'entailment': 0, 
                'contradiction': 1, 
@@ -32,11 +34,8 @@ def json_to_csv (file, output_file):
 
 def accuracy(preds, y):
     max_preds = preds.argmax(dim = 1, keepdim = True)
-    correct = max_preds.squeeze(1).eq(y)
-    length =torch.FloatTensor([y.shape[0]])
-    if torch.cuda.is_available():
-        correct.cuda()
-        length.cuda()
+    correct = max_preds.squeeze(1).eq(y).to(device)
+    length =torch.FloatTensor([y.shape[0]]).to(device)
     return correct.sum() / length
   
 def main():
@@ -48,8 +47,7 @@ def main():
     parser.add_argument('--batch_size', type=int, default=512)
 
     args = parser.parse_args()  
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    
+        
     TEXT = data.Field(tokenize = 'spacy', lower = True)
     LABEL = data.LabelField()
     train_csv = os.path.join('/',args.output_dir, 'train.csv')
